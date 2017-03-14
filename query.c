@@ -1,64 +1,36 @@
-/*
- *
- * Author: Thomas Pasquier <tfjmp@g.harvard.edu>
- *
- * Copyright (C) 2017 Harvard University
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2, as
- * published by the Free Software Foundation; either version 2 of the License, or
- *	(at your option) any later version.
- *
- */
+#define KERNEL_QUERY
+#include "include/camflow_query.h"
 
-#include <linux/init.h>             // Macros used to mark up functions e.g., __init __exit
-#include <linux/module.h>           // Core header for loading LKMs into the kernel
-#include <linux/kernel.h>           // Contains types, macros, functions for the kernel
-#include <linux/camflow_query.h>
+static tag_t secret;
 
-#define QUERY_NAME "Example Query"
-
-MODULE_LICENSE("GPL");              ///< The license type -- this affects runtime behavior
-MODULE_AUTHOR("Thomas Pasquier");      ///< The author -- visible when you use modinfo
-MODULE_DESCRIPTION(QUERY_NAME);  ///< The description -- see modinfo
-MODULE_VERSION("0.1");              ///< The version of the module
-
-static char *name = "world";        ///< An example LKM argument -- default value is "world"
-module_param(name, charp, S_IRUGO); ///< Param desc. charp = char ptr, S_IRUGO can be read/not changed
-MODULE_PARM_DESC(name, "The name to display in /var/log/kern.log");  ///< parameter description
-
-#define SECRET_LABEL 1
+static void init( void ){
+  puts("Hello world!");
+  secret = generate_tag("secret");
+}
 
 static int out_edge(union prov_msg* node, union prov_msg* edge){
-  if( prov_bloom_in(prov_taint(node), SECRET_LABEL) )
-    prov_bloom_add(prov_taint(edge), SECRET_LABEL); 
+  if( edge_type(edge)== RL_WRITE  ||
+      edge_type(edge)== RL_READ   ||
+      edge_type(edge)== RL_RCV    ||
+      edge_type(edge)== RL_SND){
+    if( has_tag(node, secret) )
+      add_tag(edge, secret);
+  }
   return 0;
 }
 
 static int in_edge(union prov_msg* edge, union prov_msg* node){
-  if( prov_bloom_in(prov_taint(edge), SECRET_LABEL) ){
-    prov_bloom_add(prov_taint(node), SECRET_LABEL);
-    if( prov_type(node) == ENT_INODE_SOCKET )
+  if( has_tag(edge, secret) ){
+    add_tag(node, secret);
+    if( node_type(node) == ENT_INODE_SOCKET )
       return CAMFLOW_RAISE_WARNING;
   }
   return 0;
 }
 
-struct provenance_query_hooks hooks = {
-  QUERY_HOOK_INIT(out_edge, out_edge),
-  QUERY_HOOK_INIT(in_edge, in_edge),
-};
-
-static int __init query_init(void){
-   printk(KERN_INFO "CamFlow: loading new query... (" QUERY_NAME ")\n");
-   register_camflow_query_hook(&hooks);
-   return 0;
-}
-
-static void __exit query_exit(void){
-   printk(KERN_INFO "CamFlow: removing query... (" QUERY_NAME ")\n");
-   unregister_camflow_query_hook(&hooks);
-}
-
-module_init(query_init);
-module_exit(query_exit);
+QUERY_DESCRIPTION("An example query");
+QUERY_LICSENSE("GPL");
+QUERY_AUTHOR("Thomas Pasquier");
+QUERY_VERSION("0.1");
+QUERY_NAME("My Example Query");
+register_query(init, in_edge, out_edge);
