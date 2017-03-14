@@ -31,3 +31,10 @@
 # Debug files
 *.dSYM/
 *.su
+
+# Module build
+*.cmd
+*.symvers
+*.order
+*.mod.c
+.tmp_versions
