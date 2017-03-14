@@ -31,7 +31,7 @@ MODULE_PARM_DESC(name, "The name to display in /var/log/kern.log");  ///< parame
 
 static int out_edge(union prov_msg* node, union prov_msg* edge){
   if( prov_bloom_in(prov_taint(node), SECRET_LABEL) )
-    prov_bloom_add(prov_taint(edge), SECRET_LABEL);
+    prov_bloom_add(prov_taint(edge), SECRET_LABEL); 
   return 0;
 }
 
