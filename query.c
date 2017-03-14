@@ -27,13 +27,20 @@ static char *name = "world";        ///< An example LKM argument -- default valu
 module_param(name, charp, S_IRUGO); ///< Param desc. charp = char ptr, S_IRUGO can be read/not changed
 MODULE_PARM_DESC(name, "The name to display in /var/log/kern.log");  ///< parameter description
 
+#define SECRET_LABEL 1
+
 static int out_edge(union prov_msg* node, union prov_msg* edge){
-  printk(KERN_INFO QUERY_NAME" out edge.\n");
+  if( prov_bloom_in(prov_taint(node), SECRET_LABEL) )
+    prov_bloom_add(prov_taint(edge), SECRET_LABEL);
   return 0;
 }
 
 static int in_edge(union prov_msg* edge, union prov_msg* node){
-  printk(KERN_INFO QUERY_NAME" in edge.\n");
+  if( prov_bloom_in(prov_taint(edge), SECRET_LABEL) ){
+    prov_bloom_add(prov_taint(node), SECRET_LABEL);
+    if( prov_type(node) == ENT_INODE_SOCKET )
+      return CAMFLOW_RAISE_WARNING;
+  }
   return 0;
 }
 
