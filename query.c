@@ -9,10 +9,13 @@ static void init( void ){
 }
 
 static int out_edge(union prov_msg* node, union prov_msg* edge){
-  if( edge_type(edge)== RL_WRITE  ||
-      edge_type(edge)== RL_READ   ||
-      edge_type(edge)== RL_RCV    ||
-      edge_type(edge)== RL_SND){
+  if( edge_type(edge)== RL_WRITE              ||
+      edge_type(edge)== RL_READ               ||
+      edge_type(edge)== RL_RCV                ||
+      edge_type(edge)== RL_SND                ||
+      edge_type(edge)== RL_VERSION            ||
+      edge_type(edge)== RL_VERSION_PROCESS    ||
+      edge_type(edge)== RL_CLONE){
     if( has_tag(node, secret) )
       add_tag(edge, secret);
   }
