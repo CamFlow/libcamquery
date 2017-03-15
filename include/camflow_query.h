@@ -47,9 +47,11 @@ module_exit(query_exit);\
 #define QUERY_NAME(name_str) const char name[] = name_str
 
 static inline int puts(const char *str){
-  printk(KERN_INFO "Provenance query: %s\n", str);
+  pr_info("Provenance query: %s\n", str);
   return 0;
 }
+
+#define printf(fmt, ...) pr_info(fmt, ##__VA_ARGS__)
 
 static inline bool has_tag(union prov_msg* elmt, tag_t tag){
   return prov_bloom_in(prov_taint(elmt), tag);

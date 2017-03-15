@@ -4,7 +4,7 @@
 static tag_t secret;
 
 static void init( void ){
-  puts("Hello world!");
+  printf("Hello world!");
   secret = generate_tag("secret");
 }
 
