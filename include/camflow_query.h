@@ -28,13 +28,13 @@ struct provenance_query_hooks hooks = {\
   QUERY_HOOK_INIT(in_edge, out_fcn),\
 };\
 static int __init query_init(void){\
-   printk(KERN_INFO "Provenance query: loading new query... (%s)\n", name);\
+   printk(KERN_INFO "Provenance: loading new query... (%s)\n", name);\
    init_fcn();\
    register_camflow_query_hook(&hooks);\
    return 0;\
 }\
 static void __exit query_exit(void){\
-   printk(KERN_INFO "Provenance query: removing query... (%s)\n", name);\
+   printk(KERN_INFO "Provenance: removing query... (%s)\n", name);\
    unregister_camflow_query_hook(&hooks);\
 }\
 module_init(query_init);\
@@ -47,7 +47,7 @@ module_exit(query_exit);\
 #define QUERY_NAME(name_str) const char name[] = name_str
 
 static inline int puts(const char *str){
-  pr_info("Provenance query: %s\n", str);
+  pr_info("Provenance: %s\n", str);
   return 0;
 }
 
