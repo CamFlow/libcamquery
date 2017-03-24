@@ -8,7 +8,7 @@ static void init( void ){
   secret = generate_tag("secret");
 }
 
-static int out_edge(union prov_msg* node, union prov_msg* edge){
+static int out_edge(union prov_elt* node, union prov_elt* edge){
   if( edge_type(edge)== RL_WRITE              ||
       edge_type(edge)== RL_READ               ||
       edge_type(edge)== RL_RCV                ||
@@ -22,7 +22,7 @@ static int out_edge(union prov_msg* node, union prov_msg* edge){
   return 0;
 }
 
-static int in_edge(union prov_msg* edge, union prov_msg* node){
+static int in_edge(union prov_elt* edge, union prov_elt* node){
   if( has_tag(edge, secret) ){
     add_tag(node, secret);
     if( node_type(node) == ENT_INODE_SOCKET )
