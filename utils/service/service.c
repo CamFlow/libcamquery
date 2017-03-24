@@ -63,6 +63,14 @@ void _init_logs( void ){
  provenance_opaque_file(LOG_FILE, true);
 }
 
+static inline void print(char* str){
+    pthread_mutex_lock(&l_log);
+    fprintf(fp, str);
+    fprintf(fp, "\n");
+    fflush(fp);
+    pthread_mutex_unlock(&l_log);
+}
+
 // per thread init
 void init( void ){
  pid_t tid = gettid();
@@ -73,14 +81,12 @@ void init( void ){
 
 bool filter(union prov_msg* msg){
   // do something here
+  print("Received an entry!");
   return false;
 }
 
 void log_error(char* err_msg){
-  pthread_mutex_lock(&l_log);
-  fprintf(fp, err_msg);
-  fprintf(fp, "\n");
-  pthread_mutex_unlock(&l_log);
+  print(err_msg);
 }
 
 struct provenance_ops ops = {
