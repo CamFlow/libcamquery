@@ -39,3 +39,6 @@
 *.mod.c
 .tmp_versions
 *.o.d
+
+# build directory
+build/*

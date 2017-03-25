@@ -1,4 +1,4 @@
-INCLUDES = -I../build/SimpleLogger -I../build/inih
+INCLUDES = -I../build/SimpleLogger -I../build/inih -I../../build/uthash/src
 CCFLAGS = -g -O2 -fpic
 CCC = gcc
 LIB = /usr/local/lib/provenancelib.a -lpthread -lz

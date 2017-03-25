@@ -30,6 +30,7 @@
 #include "provenancelib.h"
 #include "provenanceutils.h"
 #include "provenancePovJSON.h"
+#include "libut.h"
 
 #define	LOG_FILE "/tmp/audit.log"
 #define gettid() syscall(SYS_gettid)
@@ -67,8 +68,39 @@ void init( void ){
  pthread_mutex_unlock(&l_log);
 }
 
+struct hashable_node {
+  union prov_elt msg;
+  struct node_identifier key;
+  UT_hash_handle hh;
+};
+
+struct hashable_edge {
+  union prov_elt msg;
+  struct hashable_edge *next;
+};
+
+static __thread struct hashable_node *node_hash_table = NULL;
+static __thread struct hashable_edge *edge_hash_head = NULL;
+
 bool filter(union prov_elt* msg){
-  // do something here
+  union prov_elt* elt = malloc(sizeof(union prov_elt));
+  memcpy(elt, msg, sizeof(union prov_elt));
+
+  if(prov_is_relation(msg)) {
+    struct hashable_edge *edge;
+    edge = (struct hashable_edge*) malloc(sizeof(struct hashable_edge));
+    memset(edge, 0, sizeof(struct hashable_edge));
+    edge->msg = *msg;
+    LL_APPEND(edge_hash_head, edge);
+  } else{
+    struct hashable_node *node;
+    node = (struct hashable_node*) malloc(sizeof(struct hashable_node));
+    memset(node, 0, sizeof(struct hashable_node));
+    node->msg = *msg;
+    node->key = msg->node_info.identifier.node_id;
+    HASH_ADD(hh, node_hash_table, key, sizeof(struct node_identifier), node);
+  }
+  
   print("Received an entry!");
   return false;
 }
