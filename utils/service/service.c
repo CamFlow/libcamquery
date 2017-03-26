@@ -94,6 +94,26 @@ int edge_compare(struct hashable_edge* he1, struct hashable_edge* he2) {
 static struct hashable_node *node_hash_table = NULL;
 static struct hashable_edge *edge_hash_head = NULL;
 
+void process(struct hashable_node* nodes, struct hashable_edge* head_edge) {
+  struct hashable_edge *elt, *tmp;
+  LL_FOREACH_SAFE(head_edge, elt, tmp) {
+    //Find nodes of the edge
+    struct node_identifier from = elt->msg.relation_info.snd.node_id;
+    struct node_identifier to = elt->msg.relation_info.rcv.node_id;
+    struct hashable_node *from_node, *to_node;
+    HASH_FIND(hh, node_hash_table, &from, sizeof(struct node_identifier), from_node);
+    HASH_FIND(hh, node_hash_table, &to, sizeof(struct node_identifier), to_node);
+    if (from_node && to_node) {
+      //do something with the nodes if both nodes are found
+      //TODO: write code here
+      //garbage collect the edge
+      LL_DELETE(head_edge, elt);
+      free(elt);
+      counter--;
+    }
+  }
+}
+
 bool filter(union prov_elt* msg){
   union prov_elt* elt = malloc(sizeof(union prov_elt));
   memcpy(elt, msg, sizeof(union prov_elt));
@@ -121,7 +141,7 @@ bool filter(union prov_elt* msg){
   pthread_mutex_lock(&c_lock);
   if (counter >= WIN_SIZE) {
     LL_SORT(edge_hash_head, edge_compare);
-    //do something here (including garbage collection)
+    process(node_hash_table, edge_hash_head);
     pthread_mutex_unlock(&c_lock);
   } else pthread_mutex_unlock(&c_lock);
   
