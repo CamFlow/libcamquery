@@ -79,6 +79,14 @@ struct hashable_edge {
   struct hashable_edge *next;
 };
 
+int edge_compare(struct hashable_edge* he1, struct hashable_edge* he2) {
+  uint32_t he1_id = he1->msg.relation_info.identifier.relation_id.id;
+  uint32_t he2_id = he2->msg.relation_info.identifier.relation_id.id;
+  if (he1_id > he2_id) return 1;
+  else if (he1_id == he2_id) return 0;
+  else return -1;
+}
+
 static __thread struct hashable_node *node_hash_table = NULL;
 static __thread struct hashable_edge *edge_hash_head = NULL;
 
@@ -92,6 +100,7 @@ bool filter(union prov_elt* msg){
     memset(edge, 0, sizeof(struct hashable_edge));
     edge->msg = *msg;
     LL_APPEND(edge_hash_head, edge);
+    LL_SORT(edge_hash_head, edge_compare);
   } else{
     struct hashable_node *node;
     node = (struct hashable_node*) malloc(sizeof(struct hashable_node));
