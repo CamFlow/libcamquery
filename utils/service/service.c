@@ -34,10 +34,14 @@
 
 #define	LOG_FILE "/tmp/audit.log"
 #define gettid() syscall(SYS_gettid)
+#define WIN_SIZE 100
 
 static pthread_mutex_t l_log =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+static pthread_mutex_t c_lock = PTHREAD_MUTEX_INITIALIZER;
 
 FILE *fp=NULL;
+
+int counter = 0;
 
 void _init_logs( void ){
  int n;
@@ -93,22 +97,33 @@ static __thread struct hashable_edge *edge_hash_head = NULL;
 bool filter(union prov_elt* msg){
   union prov_elt* elt = malloc(sizeof(union prov_elt));
   memcpy(elt, msg, sizeof(union prov_elt));
-
+  
   if(prov_is_relation(msg)) {
     struct hashable_edge *edge;
     edge = (struct hashable_edge*) malloc(sizeof(struct hashable_edge));
     memset(edge, 0, sizeof(struct hashable_edge));
     edge->msg = *msg;
+    pthread_mutex_lock(&c_lock);
     LL_APPEND(edge_hash_head, edge);
-    LL_SORT(edge_hash_head, edge_compare);
+    counter++;
+    pthread_mutex_unlock(&c_lock);
   } else{
     struct hashable_node *node;
     node = (struct hashable_node*) malloc(sizeof(struct hashable_node));
     memset(node, 0, sizeof(struct hashable_node));
     node->msg = *msg;
     node->key = msg->node_info.identifier.node_id;
+    pthread_mutex_lock(&c_lock);
     HASH_ADD(hh, node_hash_table, key, sizeof(struct node_identifier), node);
+    pthread_mutex_unlock(&c_lock);
   }
+  
+  pthread_mutex_lock(&c_lock);
+  if (counter >= WIN_SIZE) {
+    LL_SORT(edge_hash_head, edge_compare);
+    //do something here (including garbage collection)
+    pthread_mutex_unlock(&c_lock);
+  } else pthread_mutex_unlock(&c_lock);
   
   print("Received an entry!");
   return false;
