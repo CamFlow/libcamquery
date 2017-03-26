@@ -91,8 +91,8 @@ int edge_compare(struct hashable_edge* he1, struct hashable_edge* he2) {
   else return -1;
 }
 
-static __thread struct hashable_node *node_hash_table = NULL;
-static __thread struct hashable_edge *edge_hash_head = NULL;
+static struct hashable_node *node_hash_table = NULL;
+static struct hashable_edge *edge_hash_head = NULL;
 
 bool filter(union prov_elt* msg){
   union prov_elt* elt = malloc(sizeof(union prov_elt));
