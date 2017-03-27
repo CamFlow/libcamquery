@@ -53,11 +53,11 @@ static inline int puts(const char *str){
 
 #define printf(fmt, ...) pr_info(fmt, ##__VA_ARGS__)
 
-static inline bool has_tag(union prov_elt* elmt, tag_t tag){
+static inline bool has_tag(prov_entry_t* elmt, tag_t tag){
   return prov_bloom_in(prov_taint(elmt), tag);
 }
 
-static inline void add_tag(union prov_elt* elmt, tag_t tag){
+static inline void add_tag(prov_entry_t* elmt, tag_t tag){
   prov_bloom_add(prov_taint(elmt), tag);
 }
 

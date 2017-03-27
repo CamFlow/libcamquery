@@ -73,13 +73,13 @@ void init( void ){
 }
 
 struct hashable_node {
-  union prov_elt msg;
+  prov_entry_t msg;
   struct node_identifier key;
   UT_hash_handle hh;
 };
 
 struct hashable_edge {
-  union prov_elt msg;
+  prov_entry_t msg;
   struct hashable_edge *next;
 };
 
@@ -114,10 +114,10 @@ void process(struct hashable_node* nodes, struct hashable_edge* head_edge) {
   }
 }
 
-bool filter(union prov_elt* msg){
-  union prov_elt* elt = malloc(sizeof(union prov_elt));
-  memcpy(elt, msg, sizeof(union prov_elt));
-  
+bool filter(prov_entry_t* msg){
+  prov_entry_t* elt = malloc(sizeof(prov_entry_t));
+  memcpy(elt, msg, sizeof(prov_entry_t));
+
   if(prov_is_relation(msg)) {
     struct hashable_edge *edge;
     edge = (struct hashable_edge*) malloc(sizeof(struct hashable_edge));
@@ -137,14 +137,14 @@ bool filter(union prov_elt* msg){
     HASH_ADD(hh, node_hash_table, key, sizeof(struct node_identifier), node);
     pthread_mutex_unlock(&c_lock);
   }
-  
+
   pthread_mutex_lock(&c_lock);
   if (counter >= WIN_SIZE) {
     LL_SORT(edge_hash_head, edge_compare);
     process(node_hash_table, edge_hash_head);
     pthread_mutex_unlock(&c_lock);
   } else pthread_mutex_unlock(&c_lock);
-  
+
   print("Received an entry!");
   return false;
 }
