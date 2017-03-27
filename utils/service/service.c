@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <netdb.h>
 #include <pthread.h>
+#include <time.h>
 
 #include "provenancelib.h"
 #include "provenanceutils.h"
@@ -35,6 +36,7 @@
 #define	LOG_FILE "/tmp/audit.log"
 #define gettid() syscall(SYS_gettid)
 #define WIN_SIZE 100
+#define WAIT_TIME 5
 
 static pthread_mutex_t l_log =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 static pthread_mutex_t c_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -72,6 +74,18 @@ void init( void ){
  pthread_mutex_unlock(&l_log);
 }
 
+struct timespec time_elapsed(struct timespec start, struct timespec end) {
+  struct timespec temp;
+  if ((end.tv_nsec - start.tv_nsec) < 0) {
+    temp.tv_sec = end.tv_sec - start.tv_sec - 1;
+    temp.tv_nsec = 1000000000 + end.tv_nsec - start.tv_nsec;
+  } else {
+    temp.tv_sec = end.tv_sec - start.tv_sec;
+    temp.tv_nsec = end.tv_nsec - start.tv_nsec;
+  }
+  return temp;
+}
+
 struct hashable_node {
   prov_entry_t msg;
   struct node_identifier key;
@@ -80,6 +94,7 @@ struct hashable_node {
 
 struct hashable_edge {
   prov_entry_t msg;
+  struct timespec t_exist;
   struct hashable_edge *next;
 };
 
@@ -95,6 +110,8 @@ static struct hashable_node *node_hash_table = NULL;
 static struct hashable_edge *edge_hash_head = NULL;
 
 void process(struct hashable_node* nodes, struct hashable_edge* head_edge) {
+  struct timespec t_cur;
+  clock_gettime(CLOCK_REALTIME, &t_cur);
   struct hashable_edge *elt, *tmp;
   LL_FOREACH_SAFE(head_edge, elt, tmp) {
     //Find nodes of the edge
@@ -103,13 +120,24 @@ void process(struct hashable_node* nodes, struct hashable_edge* head_edge) {
     struct hashable_node *from_node, *to_node;
     HASH_FIND(hh, node_hash_table, &from, sizeof(struct node_identifier), from_node);
     HASH_FIND(hh, node_hash_table, &to, sizeof(struct node_identifier), to_node);
+    //do something with the nodes if both nodes are found
     if (from_node && to_node) {
-      //do something with the nodes if both nodes are found
-      //TODO: write code here
-      //garbage collect the edge
-      LL_DELETE(head_edge, elt);
-      free(elt);
-      counter--;
+      //and if the edge has been in the window for a predetermined time
+      if (time_elapsed(elt->t_exist, t_cur).tv_sec >= WAIT_TIME) {
+        //TODO: write code here
+        //garbage collect the edge
+        LL_DELETE(head_edge, elt);
+        free(elt);
+        counter--;
+        //garbage collect from_node if same node but new version is found
+        if (from_node->msg.node_info.identifier.node_id.id == to_node->msg.node_info.identifier.node_id.id && from_node->msg.node_info.identifier.node_id.boot_id == to_node->msg.node_info.identifier.node_id.boot_id && from_node->msg.node_info.identifier.node_id.machine_id == to_node->msg.node_info.identifier.node_id.machine_id) {
+          //this should always be the case
+          if (to_node->msg.node_info.identifier.node_id.version > from_node->msg.node_info.identifier.node_id.version) {
+            HASH_DEL(nodes, from_node);
+            free(from_node);
+          }
+        }
+      } else break; //TODO: break may not work. Need runtime check.
     }
   }
 }
@@ -123,6 +151,7 @@ bool filter(prov_entry_t* msg){
     edge = (struct hashable_edge*) malloc(sizeof(struct hashable_edge));
     memset(edge, 0, sizeof(struct hashable_edge));
     edge->msg = *msg;
+    clock_gettime(CLOCK_REALTIME, &(edge->t_exist));
     pthread_mutex_lock(&c_lock);
     LL_APPEND(edge_hash_head, edge);
     counter++;
