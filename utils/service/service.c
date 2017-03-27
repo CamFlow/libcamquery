@@ -127,13 +127,13 @@ void process(struct hashable_node* nodes, struct hashable_edge* head_edge) {
         //TODO: write code here
         //garbage collect the edge
         LL_DELETE(head_edge, elt);
-        free(elt);
         counter--;
         //garbage collect from_node if same node but new version is found
         if (W3C_TYPE(prov_type(&elt->msg)) == RL_VERSION || W3C_TYPE(prov_type(&elt->msg)) == RL_VERSION_PROCESS) {
           HASH_DEL(nodes, from_node);
           free(from_node);
         }
+        free(elt);
       } else break; //TODO: break may not work. Need runtime check.
     }
   }
@@ -168,8 +168,8 @@ bool filter(prov_entry_t* msg){
   if (counter >= WIN_SIZE) {
     LL_SORT(edge_hash_head, edge_compare);
     process(node_hash_table, edge_hash_head);
-    pthread_mutex_unlock(&c_lock);
-  } else pthread_mutex_unlock(&c_lock);
+  }
+  pthread_mutex_unlock(&c_lock);
 
   print("Received an entry!");
   return false;
