@@ -130,12 +130,9 @@ void process(struct hashable_node* nodes, struct hashable_edge* head_edge) {
         free(elt);
         counter--;
         //garbage collect from_node if same node but new version is found
-        if (from_node->msg.node_info.identifier.node_id.id == to_node->msg.node_info.identifier.node_id.id && from_node->msg.node_info.identifier.node_id.boot_id == to_node->msg.node_info.identifier.node_id.boot_id && from_node->msg.node_info.identifier.node_id.machine_id == to_node->msg.node_info.identifier.node_id.machine_id) {
-          //this should always be the case
-          if (to_node->msg.node_info.identifier.node_id.version > from_node->msg.node_info.identifier.node_id.version) {
-            HASH_DEL(nodes, from_node);
-            free(from_node);
-          }
+        if (W3C_TYPE(prov_type(&elt->msg)) == RL_VERSION || W3C_TYPE(prov_type(&elt->msg)) == RL_VERSION_PROCESS) {
+          HASH_DEL(nodes, from_node);
+          free(from_node);
         }
       } else break; //TODO: break may not work. Need runtime check.
     }
