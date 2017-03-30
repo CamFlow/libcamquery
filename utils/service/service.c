@@ -137,7 +137,7 @@ void process(struct hashable_node* nodes, struct hashable_edge* head_edge) {
         LL_DELETE(head_edge, elt);
         counter--;
         //garbage collect from_node if same node but new version is found
-        if (W3C_TYPE(prov_type(&elt->msg)) == RL_VERSION || W3C_TYPE(prov_type(&elt->msg)) == RL_VERSION_PROCESS) {
+        if (prov_type(&elt->msg) == RL_VERSION || prov_type(&elt->msg) == RL_VERSION_PROCESS) {
           HASH_DEL(nodes, from_node);
           free(from_node);
         }
