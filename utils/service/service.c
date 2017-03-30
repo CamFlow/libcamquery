@@ -37,6 +37,7 @@
 #define gettid() syscall(SYS_gettid)
 #define WIN_SIZE 100
 #define WAIT_TIME 2
+#define MAX_STALL 100
 
 static pthread_mutex_t l_log =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 static pthread_mutex_t c_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -94,6 +95,7 @@ struct hashable_node {
 
 struct hashable_edge {
   prov_entry_t *msg;
+  int missing_node_stall;
   struct timespec t_exist;
   struct hashable_edge *next;
 };
@@ -136,20 +138,30 @@ void process(struct hashable_node* nodes, struct hashable_edge* head_edge) {
     if (!to_node) {
       print ("To node not found");
     }
+    if (!from_node || !to_node) {
+      elt->missing_node_stall = elt->missing_node_stall + 1;
+      if (elt->missing_node_stall > MAX_STALL) {
+        print("****THIE EDGE HAS BEEN STALLED TOO LONG. REMOVING NOW****");
+        free(elt->msg);
+        LL_DELETE(head_edge, elt);
+        counter--;
+        free(elt);
+      }
+    }
     //do something with the nodes if both nodes are found
-    if (from_node && to_node) {
+    else if (from_node && to_node) {
       print("=====Found Both Nodes======");
       //and if the edge has been in the window for a predetermined time
       if (time_elapsed(elt->t_exist, t_cur).tv_sec >= WAIT_TIME) {
         //TODO: write code here
         print("======Processing an edge======");
         //garbage collect the edge
-        delete elt->msg;
+        free(elt->msg);
         LL_DELETE(head_edge, elt);
         counter--;
         //garbage collect from_node if same node but new version is found
         if (prov_type(elt->msg) == RL_VERSION || prov_type(elt->msg) == RL_VERSION_PROCESS) {
-          delete from_node->msg;
+          free(from_node->msg);
           HASH_DEL(nodes, from_node);
           free(from_node);
         }
@@ -174,6 +186,7 @@ bool filter(prov_entry_t* msg){
     memset(edge, 0, sizeof(struct hashable_edge));
     edge->msg = elt;
     clock_gettime(CLOCK_REALTIME, &(edge->t_exist));
+    edge->missing_node_stall = 0;
     pthread_mutex_lock(&c_lock);
     LL_APPEND(edge_hash_head, edge);
     counter++;
