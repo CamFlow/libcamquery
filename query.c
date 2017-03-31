@@ -1,11 +1,11 @@
 #define KERNEL_QUERY
 #include "include/camflow_query.h"
 
-static tag_t secret;
+static label_t secret;
 
 static void init( void ){
   printf("Hello world!");
-  secret = generate_tag("secret");
+  secret = generate_label("secret");
 }
 
 static int out_edge(prov_entry_t* node, prov_entry_t* edge){
@@ -16,15 +16,15 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
       edge_type(edge)== RL_VERSION            ||
       edge_type(edge)== RL_VERSION_PROCESS    ||
       edge_type(edge)== RL_CLONE){
-    if( has_tag(node, secret) )
-      add_tag(edge, secret);
+    if( has_label(node, secret) )
+      add_label(edge, secret);
   }
   return 0;
 }
 
 static int in_edge(prov_entry_t* edge, prov_entry_t* node){
-  if( has_tag(edge, secret) ){
-    add_tag(node, secret);
+  if( has_label(edge, secret) ){
+    add_label(node, secret);
     if( node_type(node) == ENT_INODE_SOCKET )
       return CAMFLOW_RAISE_WARNING;
   }
