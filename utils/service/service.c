@@ -110,24 +110,24 @@ int edge_compare(struct hashable_edge* he1, struct hashable_edge* he2) {
 static struct hashable_node *node_hash_table = NULL;
 static struct hashable_edge *edge_hash_table = NULL;
 
-void process(struct hashable_node* nodes, struct hashable_edge* edges) {
+void process() {
   struct timespec t_cur;
   struct node_identifier from, to;
   struct hashable_node *from_node, *to_node;
   struct hashable_edge *edge, *tmp;
 
   clock_gettime(CLOCK_REALTIME, &t_cur);
-  HASH_ITER(hh, edges, edge, tmp) {
+  HASH_ITER(hh, edge_hash_table, edge, tmp) {
     //Find nodes of the edge
     memcpy(&from, &edge->msg->relation_info.snd.node_id, sizeof(struct node_identifier));
     memcpy(&to, &edge->msg->relation_info.rcv.node_id, sizeof(struct node_identifier));
-    HASH_FIND(hh, nodes, &from, sizeof(struct node_identifier), from_node);
-    HASH_FIND(hh, nodes, &to, sizeof(struct node_identifier), to_node);
+    HASH_FIND(hh, node_hash_table, &from, sizeof(struct node_identifier), from_node);
+    HASH_FIND(hh, node_hash_table, &to, sizeof(struct node_identifier), to_node);
     if (!from_node || !to_node) {
       edge->missing_node_stall = edge->missing_node_stall + 1;
       if (edge->missing_node_stall > MAX_STALL) {
         print("****THIS EDGE HAS BEEN STALLED TOO LONG****");
-        HASH_DEL(edges, edge);
+        HASH_DEL(edge_hash_table, edge);
         free(edge->msg);
         free(edge);
       } else break;
@@ -141,12 +141,12 @@ void process(struct hashable_node* nodes, struct hashable_edge* edges) {
         print("======Processing an edge======");
         //garbage collect from_node if same node but new version is found
         if (prov_type(edge->msg) == RL_VERSION || prov_type(edge->msg) == RL_VERSION_PROCESS) {
-          HASH_DEL(nodes, from_node);
+          HASH_DEL(node_hash_table, from_node);
           free(from_node->msg);
           free(from_node);
         }
         //garbage collect the edge
-        HASH_DEL(edges, edge);
+        HASH_DEL(edge_hash_table, edge);
         free(edge->msg);
         free(edge);
       } else {
@@ -197,7 +197,7 @@ bool filter(prov_entry_t* msg){
     fprintf(fp, "\n");
     fflush(fp);
     pthread_mutex_unlock(&l_log);
-    process(node_hash_table, edge_hash_table);
+    process();
     pthread_mutex_lock(&l_log);
     fprintf(fp, "%s %u", "Hash Table (Nodes) Size After: ", HASH_COUNT(node_hash_table));
     fprintf(fp, "\n");
