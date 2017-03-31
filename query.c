@@ -9,6 +9,7 @@ static void init( void ){
 }
 
 static int out_edge(prov_entry_t* node, prov_entry_t* edge){
+  printf("Query: (%llx)--%llx-->", prov_type(node), prov_type(edge));
   if( edge_type(edge)== RL_WRITE              ||
       edge_type(edge)== RL_READ               ||
       edge_type(edge)== RL_RCV                ||
@@ -23,6 +24,7 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
 }
 
 static int in_edge(prov_entry_t* edge, prov_entry_t* node){
+  printf("Query: --%llx-->(%llx)", prov_type(edge), prov_type(node));
   if( has_label(edge, secret) ){
     add_label(node, secret);
     if( node_type(node) == ENT_INODE_SOCKET )
