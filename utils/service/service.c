@@ -44,8 +44,6 @@ static pthread_mutex_t c_lock = PTHREAD_MUTEX_INITIALIZER;
 
 FILE *fp=NULL;
 
-int counter = 0;
-
 void _init_logs( void ){
  int n;
  fp = fopen(LOG_FILE, "a+");
@@ -97,7 +95,8 @@ struct hashable_edge {
   prov_entry_t *msg;
   int missing_node_stall;
   struct timespec t_exist;
-  struct hashable_edge *next;
+  struct relation_identifier key;
+  UT_hash_handle hh;
 };
 
 int edge_compare(struct hashable_edge* he1, struct hashable_edge* he2) {
@@ -109,90 +108,73 @@ int edge_compare(struct hashable_edge* he1, struct hashable_edge* he2) {
 }
 
 static struct hashable_node *node_hash_table = NULL;
-static struct hashable_edge *edge_hash_head = NULL;
+static struct hashable_edge *edge_hash_table = NULL;
 
-void process(struct hashable_node* nodes, struct hashable_edge* head_edge) {
+void process(struct hashable_node* nodes, struct hashable_edge* edges) {
   struct timespec t_cur;
+  struct node_identifier from, to;
+  struct hashable_node *from_node, *to_node;
+  struct hashable_edge *edge, *tmp;
+
   clock_gettime(CLOCK_REALTIME, &t_cur);
-  struct hashable_edge *elt, *tmp = NULL;
-  LL_FOREACH_SAFE(head_edge, elt, tmp) {
+  HASH_ITER(hh, edges, edge, tmp) {
     //Find nodes of the edge
-    struct node_identifier from = elt->msg->relation_info.snd.node_id;
-    pthread_mutex_lock(&l_log);
-    fprintf(fp, "%s %u", "From Node: ", from.id);
-    fprintf(fp, "\n");
-    fflush(fp);
-    pthread_mutex_unlock(&l_log);
-    struct node_identifier to = elt->msg->relation_info.rcv.node_id;
-    pthread_mutex_lock(&l_log);
-    fprintf(fp, "%s %u", "To Node: ", to.id);
-    fprintf(fp, "\n");
-    fflush(fp);
-    pthread_mutex_unlock(&l_log);
-    struct hashable_node *from_node, *to_node = NULL;
+    memcpy(&from, &edge->msg->relation_info.snd.node_id, sizeof(struct node_identifier));
+    memcpy(&to, &edge->msg->relation_info.rcv.node_id, sizeof(struct node_identifier));
     HASH_FIND(hh, nodes, &from, sizeof(struct node_identifier), from_node);
     HASH_FIND(hh, nodes, &to, sizeof(struct node_identifier), to_node);
-    if (!from_node) {
-      print ("From node not found");
-    }
-    if (!to_node) {
-      print ("To node not found");
-    }
     if (!from_node || !to_node) {
-      elt->missing_node_stall = elt->missing_node_stall + 1;
-      if (elt->missing_node_stall > MAX_STALL) {
-        print("****THIE EDGE HAS BEEN STALLED TOO LONG. REMOVING NOW****");
-        free(elt->msg);
-        LL_DELETE(head_edge, elt);
-        counter--;
-        free(elt);
-      }
+      edge->missing_node_stall = edge->missing_node_stall + 1;
+      if (edge->missing_node_stall > MAX_STALL) {
+        print("****THIS EDGE HAS BEEN STALLED TOO LONG****");
+        HASH_DEL(edges, edge);
+        free(edge->msg);
+        free(edge);
+      } else break;
     }
     //do something with the nodes if both nodes are found
     else if (from_node && to_node) {
       print("=====Found Both Nodes======");
       //and if the edge has been in the window for a predetermined time
-      if (time_elapsed(elt->t_exist, t_cur).tv_sec >= WAIT_TIME) {
+      if (time_elapsed(edge->t_exist, t_cur).tv_sec >= WAIT_TIME) {
         //TODO: write code here
         print("======Processing an edge======");
-        //garbage collect the edge
-        free(elt->msg);
-        LL_DELETE(head_edge, elt);
-        counter--;
         //garbage collect from_node if same node but new version is found
-        if (prov_type(elt->msg) == RL_VERSION || prov_type(elt->msg) == RL_VERSION_PROCESS) {
-          free(from_node->msg);
+        if (prov_type(edge->msg) == RL_VERSION || prov_type(edge->msg) == RL_VERSION_PROCESS) {
           HASH_DEL(nodes, from_node);
+          free(from_node->msg);
           free(from_node);
         }
-        free(elt);
+        //garbage collect the edge
+        HASH_DEL(edges, edge);
+        free(edge->msg);
+        free(edge);
       } else {
-        print("Going to break here...");
         break;
       }
-    } else {
-      print("Break again here...");
-      break;
     }
   }
 }
 
 bool filter(prov_entry_t* msg){
   prov_entry_t* elt = malloc(sizeof(prov_entry_t));
-  memcpy(elt, msg, sizeof(prov_entry_t));
+  struct hashable_edge *edge;
+  struct hashable_node *node;
+  unsigned int edge_count;
 
+  memcpy(elt, msg, sizeof(prov_entry_t));
   if(prov_is_relation(elt)) {
-    struct hashable_edge *edge = (struct hashable_edge*) malloc(sizeof(struct hashable_edge));
+    edge = (struct hashable_edge*) malloc(sizeof(struct hashable_edge));
     memset(edge, 0, sizeof(struct hashable_edge));
     edge->msg = elt;
-    clock_gettime(CLOCK_REALTIME, &(edge->t_exist));
     edge->missing_node_stall = 0;
+    clock_gettime(CLOCK_REALTIME, &(edge->t_exist));
+    memcpy(&edge->key, &(elt->relation_info.identifier.relation_id), sizeof(struct relation_identifier));
     pthread_mutex_lock(&c_lock);
-    LL_APPEND(edge_hash_head, edge);
-    counter++;
+    HASH_ADD(hh, edge_hash_table, key, sizeof(struct relation_identifier), edge);
     pthread_mutex_unlock(&c_lock);
   } else{
-    struct hashable_node *node = (struct hashable_node*) malloc(sizeof(struct hashable_node));
+    node = (struct hashable_node*) malloc(sizeof(struct hashable_node));
     memset(node, 0, sizeof(struct hashable_node));
     node->msg = elt;
     memcpy(&node->key, &(elt->node_info.identifier.node_id), sizeof(struct node_identifier));
@@ -202,37 +184,32 @@ bool filter(prov_entry_t* msg){
   }
 
   pthread_mutex_lock(&c_lock);
-  if (counter >= WIN_SIZE) {
-    LL_SORT(edge_hash_head, edge_compare);
-    struct hashable_edge *elt;
-    int count_edges;
+  edge_count = HASH_COUNT(edge_hash_table);
+  if (edge_count >= WIN_SIZE) {
+    HASH_SORT(edge_hash_table, edge_compare);
     pthread_mutex_lock(&l_log);
     fprintf(fp, "%s %u", "Hash Table (Nodes) Size Before: ", HASH_COUNT(node_hash_table));
     fprintf(fp, "\n");
     fflush(fp);
     pthread_mutex_unlock(&l_log);
-    LL_COUNT(edge_hash_head, elt, count_edges);
     pthread_mutex_lock(&l_log);
-    fprintf(fp, "%s %d", "Hash List (Edges) Size Before: ", count_edges);
+    fprintf(fp, "%s %d", "Hash Table (Edges) Size Before: ", HASH_COUNT(edge_hash_table));
     fprintf(fp, "\n");
     fflush(fp);
     pthread_mutex_unlock(&l_log);
-    process(node_hash_table, edge_hash_head);
+    process(node_hash_table, edge_hash_table);
     pthread_mutex_lock(&l_log);
     fprintf(fp, "%s %u", "Hash Table (Nodes) Size After: ", HASH_COUNT(node_hash_table));
     fprintf(fp, "\n");
     fflush(fp);
     pthread_mutex_unlock(&l_log);
-    LL_COUNT(edge_hash_head, elt, count_edges);
     pthread_mutex_lock(&l_log);
-    fprintf(fp, "%s %d", "Hash List (Edges) Size After: ", count_edges);
+    fprintf(fp, "%s %d", "Hash Table (Edges) Size After: ", HASH_COUNT(edge_hash_table));
     fprintf(fp, "\n");
     fflush(fp);
     pthread_mutex_unlock(&l_log);
   }
   pthread_mutex_unlock(&c_lock);
-
-  print("Received an entry!");
   return false;
 }
 
@@ -256,7 +233,7 @@ int main(void){
    fprintf(fp, "Failed registering audit operation (%d).\n", rc);
    exit(rc);
  }
- fprintf(fp, machine_description_json(json));
+ fprintf(fp, "=====STARTING====");
  fprintf(fp, "\n");
  fflush(fp);
 
