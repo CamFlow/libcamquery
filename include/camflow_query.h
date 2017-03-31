@@ -18,9 +18,9 @@
 #include <linux/kernel.h>
 #include <linux/camflow_query.h>
 
-typedef uint64_t tag_t;
+typedef uint64_t label_t;
 
-#define assign_tag(name, str) name = generate_tag(str)
+#define assign_label(name, str) name = generate_label(str)
 
 #define register_query(init_fcn, in_fcn, out_fcn)\
 struct provenance_query_hooks hooks = {\
@@ -53,12 +53,12 @@ static inline int puts(const char *str){
 
 #define printf(fmt, ...) pr_info(fmt, ##__VA_ARGS__)
 
-static inline bool has_tag(prov_entry_t* elmt, tag_t tag){
-  return prov_bloom_in(prov_taint(elmt), tag);
+static inline bool has_label(prov_entry_t* elmt, label_t label){
+  return prov_bloom_in(prov_taint(elmt), label);
 }
 
-static inline void add_tag(prov_entry_t* elmt, tag_t tag){
-  prov_bloom_add(prov_taint(elmt), tag);
+static inline void add_label(prov_entry_t* elmt, label_t label){
+  prov_bloom_add(prov_taint(elmt), label);
 }
 
 #else
