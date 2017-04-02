@@ -35,7 +35,7 @@
 
 #define	LOG_FILE "/tmp/audit.log"
 #define gettid() syscall(SYS_gettid)
-#define WIN_SIZE 100
+#define WIN_SIZE 1
 #define WAIT_TIME 2
 #define MAX_STALL 100
 
@@ -238,6 +238,7 @@ int main(void){
  fflush(fp);
 
  while(1){
+   process();
    sleep(1);
  }
  provenance_stop();
