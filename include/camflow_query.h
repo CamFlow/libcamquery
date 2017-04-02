@@ -24,8 +24,8 @@ typedef uint64_t label_t;
 
 #define register_query(init_fcn, in_fcn, out_fcn)\
 struct provenance_query_hooks hooks = {\
-  QUERY_HOOK_INIT(out_edge, in_fcn),\
-  QUERY_HOOK_INIT(in_edge, out_fcn),\
+  QUERY_HOOK_INIT(out_edge, out_fcn),\
+  QUERY_HOOK_INIT(in_edge, in_fcn),\
 };\
 static int __init query_init(void){\
    printk(KERN_INFO "Provenance: loading new query... (%s)\n", name);\
