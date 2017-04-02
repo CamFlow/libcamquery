@@ -160,7 +160,6 @@ bool filter(prov_entry_t* msg){
   prov_entry_t* elt = malloc(sizeof(prov_entry_t));
   struct hashable_edge *edge;
   struct hashable_node *node;
-  unsigned int edge_count;
 
   memcpy(elt, msg, sizeof(prov_entry_t));
   if(prov_is_relation(elt)) {
@@ -182,34 +181,6 @@ bool filter(prov_entry_t* msg){
     HASH_ADD(hh, node_hash_table, key, sizeof(struct node_identifier), node);
     pthread_mutex_unlock(&c_lock);
   }
-
-  pthread_mutex_lock(&c_lock);
-  edge_count = HASH_COUNT(edge_hash_table);
-  if (edge_count >= WIN_SIZE) {
-    HASH_SORT(edge_hash_table, edge_compare);
-    pthread_mutex_lock(&l_log);
-    fprintf(fp, "%s %u", "Hash Table (Nodes) Size Before: ", HASH_COUNT(node_hash_table));
-    fprintf(fp, "\n");
-    fflush(fp);
-    pthread_mutex_unlock(&l_log);
-    pthread_mutex_lock(&l_log);
-    fprintf(fp, "%s %d", "Hash Table (Edges) Size Before: ", HASH_COUNT(edge_hash_table));
-    fprintf(fp, "\n");
-    fflush(fp);
-    pthread_mutex_unlock(&l_log);
-    process();
-    pthread_mutex_lock(&l_log);
-    fprintf(fp, "%s %u", "Hash Table (Nodes) Size After: ", HASH_COUNT(node_hash_table));
-    fprintf(fp, "\n");
-    fflush(fp);
-    pthread_mutex_unlock(&l_log);
-    pthread_mutex_lock(&l_log);
-    fprintf(fp, "%s %d", "Hash Table (Edges) Size After: ", HASH_COUNT(edge_hash_table));
-    fprintf(fp, "\n");
-    fflush(fp);
-    pthread_mutex_unlock(&l_log);
-  }
-  pthread_mutex_unlock(&c_lock);
   return false;
 }
 
@@ -225,6 +196,7 @@ struct provenance_ops ops = {
 
 int main(void){
  int rc;
+ unsigned int edge_count;
  char json[4096];
 	_init_logs();
  fprintf(fp, "Runtime query service pid: %ld\n", getpid());
@@ -238,7 +210,33 @@ int main(void){
  fflush(fp);
 
  while(1){
-   process();
+   pthread_mutex_lock(&c_lock);
+   edge_count = HASH_COUNT(edge_hash_table);
+   if (edge_count >= WIN_SIZE) {
+     HASH_SORT(edge_hash_table, edge_compare);
+     pthread_mutex_lock(&l_log);
+     fprintf(fp, "%s %u", "Hash Table (Nodes) Size Before: ", HASH_COUNT(node_hash_table));
+     fprintf(fp, "\n");
+     fflush(fp);
+     pthread_mutex_unlock(&l_log);
+     pthread_mutex_lock(&l_log);
+     fprintf(fp, "%s %d", "Hash Table (Edges) Size Before: ", HASH_COUNT(edge_hash_table));
+     fprintf(fp, "\n");
+     fflush(fp);
+     pthread_mutex_unlock(&l_log);
+     process();
+     pthread_mutex_lock(&l_log);
+     fprintf(fp, "%s %u", "Hash Table (Nodes) Size After: ", HASH_COUNT(node_hash_table));
+     fprintf(fp, "\n");
+     fflush(fp);
+     pthread_mutex_unlock(&l_log);
+     pthread_mutex_lock(&l_log);
+     fprintf(fp, "%s %d", "Hash Table (Edges) Size After: ", HASH_COUNT(edge_hash_table));
+     fprintf(fp, "\n");
+     fflush(fp);
+     pthread_mutex_unlock(&l_log);
+   }
+   pthread_mutex_unlock(&c_lock);
    sleep(1);
  }
  provenance_stop();
