@@ -40,7 +40,8 @@
 #define MAX_STALL 100
 
 static pthread_mutex_t l_log =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-static pthread_mutex_t c_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t c_lock_node = PTHREAD_MUTEX_INITIALIZER;
 
 FILE *fp=NULL;
 
@@ -121,9 +122,11 @@ void process() {
     //Find nodes of the edge
     memcpy(&from, &edge->msg->relation_info.snd.node_id, sizeof(struct node_identifier));
     memcpy(&to, &edge->msg->relation_info.rcv.node_id, sizeof(struct node_identifier));
+    pthread_mutex_lock(&c_lock_node);
     HASH_FIND(hh, node_hash_table, &from, sizeof(struct node_identifier), from_node);
     HASH_FIND(hh, node_hash_table, &to, sizeof(struct node_identifier), to_node);
     if (!from_node || !to_node) {
+      pthread_mutex_unlock(&c_lock_node);
       edge->missing_node_stall = edge->missing_node_stall + 1;
       if (edge->missing_node_stall > MAX_STALL) {
         print("****THIS EDGE HAS BEEN STALLED TOO LONG****");
@@ -145,11 +148,13 @@ void process() {
           free(from_node->msg);
           free(from_node);
         }
+        pthread_mutex_unlock(&c_lock_node);
         //garbage collect the edge
         HASH_DEL(edge_hash_table, edge);
         free(edge->msg);
         free(edge);
       } else {
+        pthread_mutex_unlock(&c_lock_node);
         break;
       }
     }
@@ -169,17 +174,17 @@ bool filter(prov_entry_t* msg){
     edge->missing_node_stall = 0;
     clock_gettime(CLOCK_REALTIME, &(edge->t_exist));
     memcpy(&edge->key, &(elt->relation_info.identifier.relation_id), sizeof(struct relation_identifier));
-    pthread_mutex_lock(&c_lock);
+    pthread_mutex_lock(&c_lock_edge);
     HASH_ADD(hh, edge_hash_table, key, sizeof(struct relation_identifier), edge);
-    pthread_mutex_unlock(&c_lock);
+    pthread_mutex_unlock(&c_lock_edge);
   } else{
     node = (struct hashable_node*) malloc(sizeof(struct hashable_node));
     memset(node, 0, sizeof(struct hashable_node));
     node->msg = elt;
     memcpy(&node->key, &(elt->node_info.identifier.node_id), sizeof(struct node_identifier));
-    pthread_mutex_lock(&c_lock);
+    pthread_mutex_lock(&c_lock_node);
     HASH_ADD(hh, node_hash_table, key, sizeof(struct node_identifier), node);
-    pthread_mutex_unlock(&c_lock);
+    pthread_mutex_unlock(&c_lock_node);
   }
   return false;
 }
@@ -210,7 +215,7 @@ int main(void){
  fflush(fp);
 
  while(1){
-   pthread_mutex_lock(&c_lock);
+   pthread_mutex_lock(&c_lock_edge);
    edge_count = HASH_COUNT(edge_hash_table);
    if (edge_count >= WIN_SIZE) {
      HASH_SORT(edge_hash_table, edge_compare);
@@ -236,7 +241,7 @@ int main(void){
      fflush(fp);
      pthread_mutex_unlock(&l_log);
    }
-   pthread_mutex_unlock(&c_lock);
+   pthread_mutex_unlock(&c_lock_edge);
    sleep(1);
  }
  provenance_stop();
