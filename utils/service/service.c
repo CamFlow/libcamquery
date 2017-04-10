@@ -110,18 +110,18 @@ static struct hashable_edge *edge_hash_table = NULL;
 
 static inline bool clean_incoming(prov_entry_t *from,
                                   prov_entry_t *edge){
-  if(prov_type(edge) == RL_VERSION || prov_type(edge) == RL_VERSION_PROCESS)
+  if (prov_type(edge) == RL_VERSION || prov_type(edge) == RL_VERSION_PROCESS)
     return true;
-  if(prov_type(edge) == RL_NAMED_PROCESS || prov_type(edge) == RL_NAMED)
+  if (prov_type(edge) == RL_NAMED_PROCESS || prov_type(edge) == RL_NAMED)
     return true;
-  if(prov_type(from) == ENT_PACKET
+  if (prov_type(from) == ENT_PACKET
       || prov_type(from) == ENT_XATTR)
     return true;
   return false;
 }
 
 static inline bool clean_bothend(prov_entry_t *edge){
-  if(prov_type(edge) == RL_CLOSED || prov_type(edge) == RL_TERMINATE_PROCESS)
+  if (prov_type(edge) == RL_CLOSED || prov_type(edge) == RL_TERMINATE_PROCESS)
     return true;
   return false;
 }
