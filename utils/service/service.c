@@ -150,6 +150,14 @@ void process() {
             HASH_DEL(node_hash_table, from_node);
             free(from_node->msg);
             free(from_node);
+        } else if (prov_type(edge->msg) == RL_CLOSED
+                  || prov_type(edge->msg) == RL_TERMINATE_PROCESS) {
+          HASH_DEL(node_hash_table, from_node);
+          free(from_node->msg);
+          free(from_node);
+          HASH_DEL(node_hash_table, to_node);
+          free(to_node->msg);
+          free(to_node);
         }
         pthread_mutex_unlock(&c_lock_node);
         //garbage collect the edge
@@ -204,7 +212,6 @@ struct provenance_ops ops = {
 
 int main(void){
  int rc;
- unsigned int edge_count;
  char json[4096];
 	_init_logs();
  fprintf(fp, "Runtime query service pid: %ld\n", getpid());
@@ -219,15 +226,12 @@ int main(void){
 
  while(1){
    pthread_mutex_lock(&c_lock_edge);
-   edge_count = HASH_COUNT(edge_hash_table);
-   if (edge_count >= WIN_SIZE) {
-     HASH_SORT(edge_hash_table, edge_compare);
-     print("%s %u", "Hash Table (Nodes) Size Before: ", HASH_COUNT(node_hash_table));
-     print("%s %u", "Hash Table (Edges) Size Before: ", HASH_COUNT(edge_hash_table));
-     process();
-     print("%s %u", "Hash Table (Nodes) Size After: ", HASH_COUNT(node_hash_table));
-     print("%s %u", "Hash Table (Edges) Size After: ", HASH_COUNT(edge_hash_table));
-   }
+   HASH_SORT(edge_hash_table, edge_compare);
+   print("%s %u", "Hash Table (Nodes) Size Before: ", HASH_COUNT(node_hash_table));
+   print("%s %u", "Hash Table (Edges) Size Before: ", HASH_COUNT(edge_hash_table));
+   process();
+   print("%s %u", "Hash Table (Nodes) Size After: ", HASH_COUNT(node_hash_table));
+   print("%s %u", "Hash Table (Edges) Size After: ", HASH_COUNT(edge_hash_table));
    pthread_mutex_unlock(&c_lock_edge);
    sleep(1);
  }
