@@ -37,7 +37,6 @@
 #define gettid() syscall(SYS_gettid)
 #define WIN_SIZE 1
 #define WAIT_TIME 2
-#define MAX_STALL 100
 
 static pthread_mutex_t l_log =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
@@ -91,7 +90,6 @@ struct hashable_node {
 
 struct hashable_edge {
   prov_entry_t *msg;
-  int missing_node_stall;
   struct timespec t_exist;
   struct relation_identifier key;
   UT_hash_handle hh;
@@ -149,8 +147,9 @@ static inline void get_nodes(struct hashable_edge *edge,
 }
 
 static inline bool handle_missing_nodes(struct hashable_edge *edge){
-  edge->missing_node_stall = edge->missing_node_stall + 1;
-  if (edge->missing_node_stall < MAX_STALL)
+  struct timespec t_cur;
+  clock_gettime(CLOCK_REALTIME, &t_cur);
+  if (time_elapsed(edge->t_exist, t_cur).tv_sec < 5*WAIT_TIME)
     return false;
   print("****THIS EDGE HAS BEEN STALLED TOO LONG****");
   delete_edge(edge);
@@ -197,7 +196,6 @@ bool filter(prov_entry_t* msg){
     edge = (struct hashable_edge*) malloc(sizeof(struct hashable_edge));
     memset(edge, 0, sizeof(struct hashable_edge));
     edge->msg = elt;
-    edge->missing_node_stall = 0;
     clock_gettime(CLOCK_REALTIME, &(edge->t_exist));
     memcpy(&edge->key, &(elt->relation_info.identifier.relation_id), sizeof(struct relation_identifier));
     pthread_mutex_lock(&c_lock_edge);
