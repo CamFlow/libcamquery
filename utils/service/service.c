@@ -143,10 +143,16 @@ void process() {
         //TODO: write code here
         print("======Processing an edge======");
         //garbage collect from_node if same node but new version is found
-        if (prov_type(edge->msg) == RL_VERSION || prov_type(edge->msg) == RL_VERSION_PROCESS) {
-          HASH_DEL(node_hash_table, from_node);
-          free(from_node->msg);
-          free(from_node);
+        if (prov_type(edge->msg) == RL_VERSION
+          || prov_type(edge->msg) == RL_VERSION_PROCESS
+          || (prov_type(edge->msg) == RL_NAMED_PROCESS
+                  && prov_type(from_node->msg) == ENT_FILE_NAME)
+          || prov_type(from_node->msg) == ENT_PACKET
+          || prov_type(from_node->msg) == ENT_ADDR
+          || prov_type(from_node->msg) == ENT_XATTR) {
+            HASH_DEL(node_hash_table, from_node);
+            free(from_node->msg);
+            free(from_node);
         }
         pthread_mutex_unlock(&c_lock_node);
         //garbage collect the edge
