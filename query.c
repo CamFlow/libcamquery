@@ -8,28 +8,83 @@ static void init( void ){
   secret = generate_label("secret");
 }
 
-static int out_edge(prov_entry_t* node, prov_entry_t* edge){
-  printf("Query: (%llx)--%llx-->", prov_type(node), prov_type(edge));
-  if( edge_type(edge)== RL_WRITE              ||
-      edge_type(edge)== RL_READ               ||
-      edge_type(edge)== RL_RCV                ||
-      edge_type(edge)== RL_SND                ||
-      edge_type(edge)== RL_VERSION            ||
-      edge_type(edge)== RL_VERSION_PROCESS    ||
-      edge_type(edge)== RL_CLONE){
-    if( has_label(node, secret) )
-      add_label(edge, secret);
+static inline void compare_buffer(uint8_t* a, uint8_t* b){
+  int i;
+  for(i=0; i<PROV_IDENTIFIER_BUFFER_LENGTH;i++){
+    if(a[i]!=b[i]){
+      printf("=====ERROR IN BUFFER======\n\n");
+    }
   }
+}
+
+static int out_edge(prov_entry_t* node, prov_entry_t* edge){
+  printf("\n\n=====NEW RELATION======");
+  printf("=====%llx======", edge->relation_info.identifier.relation_id.type);
+  compare_buffer(node->node_info.identifier.buffer, edge->relation_info.snd.buffer);
+  printf("Query: type\t (%llx)--%llx-->",
+    node->node_info.identifier.node_id.type,
+    edge->relation_info.snd.node_id.type);
+  if(node->node_info.identifier.node_id.type!=edge->relation_info.snd.node_id.type)
+    printf("=====ERROR======\n\n");
+
+  printf("Query: id\t (%llx)--%llx-->",
+    node->node_info.identifier.node_id.id,
+    edge->relation_info.snd.node_id.id);
+  if(node->node_info.identifier.node_id.id!=edge->relation_info.snd.node_id.id)
+    printf("=====ERROR======\n\n");
+
+  printf("Query: boot_id\t (%x)--%x-->",
+    node->node_info.identifier.node_id.boot_id,
+    edge->relation_info.snd.node_id.boot_id);
+  if(node->node_info.identifier.node_id.boot_id!=edge->relation_info.snd.node_id.boot_id)
+    printf("=====ERROR======\n\n");
+
+  printf("Query: machine_id\t (%x)--%x-->",
+    node->node_info.identifier.node_id.machine_id,
+    edge->relation_info.snd.node_id.machine_id);
+  if(node->node_info.identifier.node_id.machine_id!=edge->relation_info.snd.node_id.machine_id)
+    printf("=====ERROR======\n\n");
+
+  printf("Query: version\t (%x)--%x-->",
+    node->node_info.identifier.node_id.version,
+    edge->relation_info.snd.node_id.version);
+  if(node->node_info.identifier.node_id.version!=edge->relation_info.snd.node_id.version)
+    printf("=====ERROR======\n\n");
   return 0;
 }
 
 static int in_edge(prov_entry_t* edge, prov_entry_t* node){
-  printf("Query: --%llx-->(%llx)", prov_type(edge), prov_type(node));
-  if( has_label(edge, secret) ){
-    add_label(node, secret);
-    if( node_type(node) == ENT_INODE_SOCKET )
-      return CAMFLOW_RAISE_WARNING;
-  }
+  compare_buffer(node->node_info.identifier.buffer, edge->relation_info.rcv.buffer);
+  printf("Query: type\t --%llx-->(%llx)",
+    edge->relation_info.rcv.node_id.type,
+    node->node_info.identifier.node_id.type);
+  if(node->node_info.identifier.node_id.type!=edge->relation_info.rcv.node_id.type)
+    printf("=====ERROR======\n\n");
+
+  printf("Query: id\t --%llx-->(%llx)",
+    edge->relation_info.rcv.node_id.id,
+    node->node_info.identifier.node_id.id);
+  if(node->node_info.identifier.node_id.id!=edge->relation_info.rcv.node_id.id)
+    printf("=====ERROR======\n\n");
+
+  printf("Query: boot_id\t --%x-->(%x)",
+    edge->relation_info.rcv.node_id.boot_id,
+    node->node_info.identifier.node_id.boot_id);
+  if(node->node_info.identifier.node_id.boot_id!=edge->relation_info.rcv.node_id.boot_id)
+    printf("=====ERROR======\n\n");
+
+  printf("Query: machine_id\t --%x-->(%x)",
+    edge->relation_info.rcv.node_id.machine_id,
+    node->node_info.identifier.node_id.machine_id);
+  if(node->node_info.identifier.node_id.machine_id!=edge->relation_info.rcv.node_id.machine_id)
+    printf("=====ERROR======\n\n");
+
+  printf("Query: version\t --%x-->(%x)",
+    edge->relation_info.rcv.node_id.version,
+    node->node_info.identifier.node_id.version);
+  if(node->node_info.identifier.node_id.version!=edge->relation_info.rcv.node_id.version)
+    printf("=====ERROR======\n\n");
+  printf("=====END RELATION======\n\n");
   return 0;
 }
 

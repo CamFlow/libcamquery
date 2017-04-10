@@ -31,7 +31,7 @@
 #include "provenancelib.h"
 #include "provenanceutils.h"
 #include "provenancePovJSON.h"
-#include "libut.h"
+#include "uthash.h"
 
 #define	LOG_FILE "/tmp/audit.log"
 #define gettid() syscall(SYS_gettid)
@@ -58,20 +58,17 @@ void _init_logs( void ){
  provenance_opaque_file(LOG_FILE, true);
 }
 
-static inline void print(char* str){
-    pthread_mutex_lock(&l_log);
-    fprintf(fp, str);
-    fprintf(fp, "\n");
-    fflush(fp);
+#define print(fmt, ...)\
+    pthread_mutex_lock(&l_log);\
+    fprintf(fp, fmt, ##__VA_ARGS__);\
+    fprintf(fp, "\n");\
+    fflush(fp);\
     pthread_mutex_unlock(&l_log);
-}
 
 // per thread init
 void init( void ){
  pid_t tid = gettid();
- pthread_mutex_lock(&l_log);
- fprintf(fp, "audit writer thread, tid:%ld\n", tid);
- pthread_mutex_unlock(&l_log);
+ print("audit writer thread, tid:%ld\n", tid);
 }
 
 struct timespec time_elapsed(struct timespec start, struct timespec end) {
@@ -225,27 +222,11 @@ int main(void){
    edge_count = HASH_COUNT(edge_hash_table);
    if (edge_count >= WIN_SIZE) {
      HASH_SORT(edge_hash_table, edge_compare);
-     pthread_mutex_lock(&l_log);
-     fprintf(fp, "%s %u", "Hash Table (Nodes) Size Before: ", HASH_COUNT(node_hash_table));
-     fprintf(fp, "\n");
-     fflush(fp);
-     pthread_mutex_unlock(&l_log);
-     pthread_mutex_lock(&l_log);
-     fprintf(fp, "%s %d", "Hash Table (Edges) Size Before: ", HASH_COUNT(edge_hash_table));
-     fprintf(fp, "\n");
-     fflush(fp);
-     pthread_mutex_unlock(&l_log);
+     print("%s %u", "Hash Table (Nodes) Size Before: ", HASH_COUNT(node_hash_table));
+     print("%s %u", "Hash Table (Edges) Size Before: ", HASH_COUNT(edge_hash_table));
      process();
-     pthread_mutex_lock(&l_log);
-     fprintf(fp, "%s %u", "Hash Table (Nodes) Size After: ", HASH_COUNT(node_hash_table));
-     fprintf(fp, "\n");
-     fflush(fp);
-     pthread_mutex_unlock(&l_log);
-     pthread_mutex_lock(&l_log);
-     fprintf(fp, "%s %d", "Hash Table (Edges) Size After: ", HASH_COUNT(edge_hash_table));
-     fprintf(fp, "\n");
-     fflush(fp);
-     pthread_mutex_unlock(&l_log);
+     print("%s %u", "Hash Table (Nodes) Size After: ", HASH_COUNT(node_hash_table));
+     print("%s %u", "Hash Table (Edges) Size After: ", HASH_COUNT(edge_hash_table));
    }
    pthread_mutex_unlock(&c_lock_edge);
    sleep(1);
