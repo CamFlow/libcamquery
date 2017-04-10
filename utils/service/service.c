@@ -108,67 +108,82 @@ int edge_compare(struct hashable_edge* he1, struct hashable_edge* he2) {
 static struct hashable_node *node_hash_table = NULL;
 static struct hashable_edge *edge_hash_table = NULL;
 
+static inline bool clean_incoming(prov_entry_t *from,
+                                  prov_entry_t *edge){
+  if(prov_type(edge) == RL_VERSION || prov_type(edge) == RL_VERSION_PROCESS)
+    return true;
+  if(prov_type(edge) == RL_NAMED_PROCESS || prov_type(edge) == RL_NAMED)
+    return true;
+  if(prov_type(from) == ENT_PACKET
+      || prov_type(from) == ENT_XATTR)
+    return true;
+  return false;
+}
+
+static inline bool clean_bothend(prov_entry_t *edge){
+  if(prov_type(edge) == RL_CLOSED || prov_type(edge) == RL_TERMINATE_PROCESS)
+    return true;
+  return false;
+}
+
+static inline void delete_node(struct hashable_node *node){
+  HASH_DEL(node_hash_table, node);
+  free(node->msg);
+  free(node);
+}
+
+static inline void delete_edge(struct hashable_edge *edge){
+  HASH_DEL(edge_hash_table, edge);
+  free(edge->msg);
+  free(edge);
+}
+
+static inline void get_nodes(struct hashable_edge *edge,
+                              struct hashable_node **from_node,
+                              struct hashable_node **to_node){
+  struct node_identifier from, to;
+  memcpy(&from, &edge->msg->relation_info.snd.node_id, sizeof(struct node_identifier));
+  memcpy(&to, &edge->msg->relation_info.rcv.node_id, sizeof(struct node_identifier));
+  HASH_FIND(hh, node_hash_table, &from, sizeof(struct node_identifier), *from_node);
+  HASH_FIND(hh, node_hash_table, &to, sizeof(struct node_identifier), *to_node);
+}
+
+static inline bool handle_missing_nodes(struct hashable_edge *edge){
+  edge->missing_node_stall = edge->missing_node_stall + 1;
+  if (edge->missing_node_stall < MAX_STALL)
+    return false;
+  print("****THIS EDGE HAS BEEN STALLED TOO LONG****");
+  delete_edge(edge);
+  return true;
+}
+
 void process() {
   struct timespec t_cur;
-  struct node_identifier from, to;
   struct hashable_node *from_node, *to_node;
   struct hashable_edge *edge, *tmp;
 
   clock_gettime(CLOCK_REALTIME, &t_cur);
   HASH_ITER(hh, edge_hash_table, edge, tmp) {
-    //Find nodes of the edge
-    memcpy(&from, &edge->msg->relation_info.snd.node_id, sizeof(struct node_identifier));
-    memcpy(&to, &edge->msg->relation_info.rcv.node_id, sizeof(struct node_identifier));
-    pthread_mutex_lock(&c_lock_node);
-    HASH_FIND(hh, node_hash_table, &from, sizeof(struct node_identifier), from_node);
-    HASH_FIND(hh, node_hash_table, &to, sizeof(struct node_identifier), to_node);
-    if (!from_node || !to_node) {
-      pthread_mutex_unlock(&c_lock_node);
-      edge->missing_node_stall = edge->missing_node_stall + 1;
-      if (edge->missing_node_stall > MAX_STALL) {
-        print("****THIS EDGE HAS BEEN STALLED TOO LONG****");
-        HASH_DEL(edge_hash_table, edge);
-        free(edge->msg);
-        free(edge);
-      } else break;
-    }
-    //do something with the nodes if both nodes are found
-    else if (from_node && to_node) {
+    get_nodes(edge, &from_node, &to_node);
+    if (from_node && to_node) {
       print("=====Found Both Nodes======");
-      //and if the edge has been in the window for a predetermined time
       if (time_elapsed(edge->t_exist, t_cur).tv_sec >= WAIT_TIME) {
-        //TODO: write code here
         print("======Processing an edge======");
-        //garbage collect from_node if same node but new version is found
-        if (prov_type(edge->msg) == RL_VERSION
-          || prov_type(edge->msg) == RL_VERSION_PROCESS
-          || (prov_type(edge->msg) == RL_NAMED_PROCESS
-                  && prov_type(from_node->msg) == ENT_FILE_NAME)
-          || prov_type(from_node->msg) == ENT_PACKET
-          || prov_type(from_node->msg) == ENT_ADDR
-          || prov_type(from_node->msg) == ENT_XATTR) {
-            HASH_DEL(node_hash_table, from_node);
-            free(from_node->msg);
-            free(from_node);
-        } else if (prov_type(edge->msg) == RL_CLOSED
-                  || prov_type(edge->msg) == RL_TERMINATE_PROCESS) {
-          HASH_DEL(node_hash_table, from_node);
-          free(from_node->msg);
-          free(from_node);
-          HASH_DEL(node_hash_table, to_node);
-          free(to_node->msg);
-          free(to_node);
+
+        /*
+        * GARBAGE COLLECTION
+        */
+        if ( clean_incoming(from_node->msg, edge->msg) ) {
+          delete_node(from_node);
+        } else if ( clean_bothend(edge->msg) ) {
+          delete_node(from_node);
+          delete_node(to_node);
         }
-        pthread_mutex_unlock(&c_lock_node);
-        //garbage collect the edge
-        HASH_DEL(edge_hash_table, edge);
-        free(edge->msg);
-        free(edge);
-      } else {
-        pthread_mutex_unlock(&c_lock_node);
+        delete_edge(edge);
+      }else
         break;
-      }
-    }
+    }else if ( !handle_missing_nodes(edge) )
+        break;
   }
 }
 
@@ -226,12 +241,14 @@ int main(void){
 
  while(1){
    pthread_mutex_lock(&c_lock_edge);
+   pthread_mutex_lock(&c_lock_node);
    HASH_SORT(edge_hash_table, edge_compare);
    print("%s %u", "Hash Table (Nodes) Size Before: ", HASH_COUNT(node_hash_table));
    print("%s %u", "Hash Table (Edges) Size Before: ", HASH_COUNT(edge_hash_table));
    process();
    print("%s %u", "Hash Table (Nodes) Size After: ", HASH_COUNT(node_hash_table));
    print("%s %u", "Hash Table (Edges) Size After: ", HASH_COUNT(edge_hash_table));
+   pthread_mutex_unlock(&c_lock_node);
    pthread_mutex_unlock(&c_lock_edge);
    sleep(1);
  }
