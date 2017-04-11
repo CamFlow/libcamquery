@@ -152,6 +152,13 @@ static inline bool handle_missing_nodes(struct hashable_edge *edge){
   if (time_elapsed(edge->t_exist, t_cur).tv_sec < 5*WAIT_TIME)
     return false;
   print("****THIS EDGE HAS BEEN STALLED TOO LONG****");
+  /*
+  * For debug only
+  */
+  print("%s, %u", "Stuck Edge Type: ", prov_type(edge->msg));
+  print("%s, %u", "Stuck Edge From Node Type:", edge->msg->relation_info.snd.node_id.type);
+  print("%s, %u", "Stuck Edge To Node Type:", edge->msg->relation_info.rcv.node_id.type);
+  //*****************
   delete_edge(edge);
   return true;
 }
@@ -226,6 +233,11 @@ struct provenance_ops ops = {
 int main(void){
  int rc;
  char json[4096];
+ /*
+ * For debug only
+ */
+ struct hashable_node *node, *tmp;
+ //*******************
 	_init_logs();
  fprintf(fp, "Runtime query service pid: %ld\n", getpid());
  rc = provenance_register(&ops);
@@ -249,6 +261,17 @@ int main(void){
    pthread_mutex_unlock(&c_lock_node);
    pthread_mutex_unlock(&c_lock_edge);
    sleep(1);
+   /*
+   * For debug only
+   * Find out the type of the remaining nodes still in the node hash table
+   */
+   if (HASH_COUNT(edge_hash_table) == 0) {
+      HASH_ITER(hh, node_hash_table, node, tmp) {
+        print("%s, %u", "Uncleared Node Type: ", prov_type(node->msg));
+      }
+      break;
+   }
+   //*********************************
  }
  provenance_stop();
  return 0;
