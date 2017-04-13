@@ -280,17 +280,23 @@ int main(void){
    pthread_mutex_lock(&c_lock_edge);
    pthread_mutex_lock(&c_lock_node);
    HASH_SORT(edge_hash_table, edge_compare);
+   #ifdef DEBUG
    before_node_table = HASH_COUNT(node_hash_table);
    before_edge_table = HASH_COUNT(edge_hash_table);
+   #endif
    process();
+   #ifdef DEBUG
    after_node_table = HASH_COUNT(node_hash_table);
    after_edge_table = HASH_COUNT(edge_hash_table);
+   #endif
    pthread_mutex_unlock(&c_lock_node);
    pthread_mutex_unlock(&c_lock_edge);
+   #ifdef DEBUG
    print("%s %u", "Hash Table (Nodes) Size Before: ", before_node_table);
    print("%s %u", "Hash Table (Edges) Size Before: ", before_edge_table);
    print("%s %u", "Hash Table (Nodes) Size After: ", after_node_table);
    print("%s %u", "Hash Table (Edges) Size After: ", after_edge_table);
+   #endif
    sleep(1);
    /*
    * For debug only
