@@ -19,5 +19,12 @@ install:
 restart:
 	systemctl restart camflow-provenance.service
 
+analyze:
+	sudo camflow --track-file Makefile propagate
+	./script.sh > rst.txt &
+
+benchmark:
+	phoronix-test-suite benchmark pts/build-linux-kernel-1.7.0
+
 clean:
 	rm -f service.o
