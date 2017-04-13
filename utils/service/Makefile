@@ -21,10 +21,12 @@ restart:
 
 analyze:
 	./script.sh > rst.txt &
-	sudo camflow --track-file Makefile propagate
+	#sudo camflow --track-file Makefile propagate
+	sudo camflow -a true
 
 benchmark:
 	phoronix-test-suite benchmark pts/build-linux-kernel-1.7.0
+	sudo camflow -a false
 
 clean:
 	rm -f service.o
