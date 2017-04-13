@@ -36,7 +36,8 @@
 #define	LOG_FILE "/tmp/audit.log"
 #define gettid() syscall(SYS_gettid)
 #define WIN_SIZE 1
-#define WAIT_TIME 2
+#define WAIT_TIME 10
+#define STALL_TIME 1*WAIT_TIME
 
 static pthread_mutex_t l_log =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
@@ -98,9 +99,15 @@ struct hashable_edge {
 int edge_compare(struct hashable_edge* he1, struct hashable_edge* he2) {
   uint32_t he1_id = he1->msg->relation_info.identifier.relation_id.id;
   uint32_t he2_id = he2->msg->relation_info.identifier.relation_id.id;
-  if (he1_id > he2_id) return 1;
-  else if (he1_id == he2_id) return 0;
-  else return -1;
+  uint32_t he1_boot = he1->msg->relation_info.identifier.relation_id.boot_id;
+  uint32_t he2_boot = he2->msg->relation_info.identifier.relation_id.boot_id;
+  if (he1_boot < he2_boot) return -1;
+  else if (he1_boot > he2_boot) return 1;
+  else {//if both edges are in the same boot, compare their ids
+    if (he1_id > he2_id) return 1;
+    else if (he1_id == he2_id) return 0;
+    else return -1;
+  }
 }
 
 static struct hashable_node *node_hash_table = NULL;
@@ -126,6 +133,11 @@ static inline bool clean_bothend(prov_entry_t *edge){
 
 static inline void delete_node(struct hashable_node *node){
   HASH_DEL(node_hash_table, node);
+  #ifdef DEBUG
+  print("%s %d %d %d %d", "Deleting the node: ", node->msg->node_info.identifier.node_id.type,
+  node->msg->node_info.identifier.node_id.id, node->msg->node_info.identifier.node_id.boot_id,
+  node->msg->node_info.identifier.node_id.version);
+  #endif
   free(node->msg);
   free(node);
 }
@@ -146,18 +158,30 @@ static inline void get_nodes(struct hashable_edge *edge,
   HASH_FIND(hh, node_hash_table, &to, sizeof(struct node_identifier), *to_node);
 }
 
-static inline bool handle_missing_nodes(struct hashable_edge *edge){
+static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hashable_node *from_node, struct hashable_node *to_node){
   struct timespec t_cur;
   clock_gettime(CLOCK_REALTIME, &t_cur);
-  if (time_elapsed(edge->t_exist, t_cur).tv_sec < 5*WAIT_TIME)
+  if (time_elapsed(edge->t_exist, t_cur).tv_sec < STALL_TIME)
     return false;
+  #ifdef DEBUG
   print("****THIS EDGE HAS BEEN STALLED TOO LONG****");
   /*
   * For debug only
   */
-  print("%s, %u", "Stuck Edge Type: ", prov_type(edge->msg));
-  print("%s, %u", "Stuck Edge From Node Type:", edge->msg->relation_info.snd.node_id.type);
-  print("%s, %u", "Stuck Edge To Node Type:", edge->msg->relation_info.rcv.node_id.type);
+  print("%s %s", "Stuck Edge Type: ", relation_str(prov_type(edge->msg)));
+  if (from_node == NULL) {
+    print("%s %s", "Stuck Edge From Node Type: ", node_str(edge->msg->relation_info.snd.node_id.type));
+    print("%s %d %d %d %d", "Stuck node id: ", edge->msg->relation_info.snd.node_id.type,
+    edge->msg->relation_info.snd.node_id.id, edge->msg->relation_info.snd.node_id.boot_id,
+    edge->msg->relation_info.snd.node_id.version);
+  }
+  if (to_node == NULL) {
+    print("%s %s", "Stuck Edge To Node Type: ", node_str(edge->msg->relation_info.rcv.node_id.type));
+    print("%s %d %d %d %d", "Stuck node id: ", edge->msg->relation_info.rcv.node_id.type,
+    edge->msg->relation_info.rcv.node_id.id, edge->msg->relation_info.rcv.node_id.boot_id,
+    edge->msg->relation_info.rcv.node_id.version);
+  }
+  #endif
   //*****************
   delete_edge(edge);
   return true;
@@ -172,9 +196,11 @@ void process() {
   HASH_ITER(hh, edge_hash_table, edge, tmp) {
     get_nodes(edge, &from_node, &to_node);
     if (from_node && to_node) {
-      print("=====Found Both Nodes======");
+      //print("=====Found Both Nodes======");
       if (time_elapsed(edge->t_exist, t_cur).tv_sec >= WAIT_TIME) {
+        #ifdef DEBUG
         print("======Processing an edge======");
+        #endif
 
         /*
         * GARBAGE COLLECTION
@@ -188,7 +214,7 @@ void process() {
         delete_edge(edge);
       }else
         break;
-    }else if ( !handle_missing_nodes(edge) )
+    }else if ( !handle_missing_nodes(edge, from_node, to_node) )
         break;
   }
 }
@@ -233,6 +259,7 @@ struct provenance_ops ops = {
 int main(void){
  int rc;
  char json[4096];
+ unsigned int before_node_table, before_edge_table, after_node_table, after_edge_table;
  /*
  * For debug only
  */
@@ -253,24 +280,29 @@ int main(void){
    pthread_mutex_lock(&c_lock_edge);
    pthread_mutex_lock(&c_lock_node);
    HASH_SORT(edge_hash_table, edge_compare);
-   print("%s %u", "Hash Table (Nodes) Size Before: ", HASH_COUNT(node_hash_table));
-   print("%s %u", "Hash Table (Edges) Size Before: ", HASH_COUNT(edge_hash_table));
+   before_node_table = HASH_COUNT(node_hash_table);
+   before_edge_table = HASH_COUNT(edge_hash_table);
    process();
-   print("%s %u", "Hash Table (Nodes) Size After: ", HASH_COUNT(node_hash_table));
-   print("%s %u", "Hash Table (Edges) Size After: ", HASH_COUNT(edge_hash_table));
+   after_node_table = HASH_COUNT(node_hash_table);
+   after_edge_table = HASH_COUNT(edge_hash_table);
    pthread_mutex_unlock(&c_lock_node);
    pthread_mutex_unlock(&c_lock_edge);
+   print("%s %u", "Hash Table (Nodes) Size Before: ", before_node_table);
+   print("%s %u", "Hash Table (Edges) Size Before: ", before_edge_table);
+   print("%s %u", "Hash Table (Nodes) Size After: ", after_node_table);
+   print("%s %u", "Hash Table (Edges) Size After: ", after_edge_table);
    sleep(1);
    /*
    * For debug only
    * Find out the type of the remaining nodes still in the node hash table
    */
+   #ifdef DEBUG
    if (HASH_COUNT(edge_hash_table) == 0) {
       HASH_ITER(hh, node_hash_table, node, tmp) {
-        print("%s, %u", "Uncleared Node Type: ", prov_type(node->msg));
+        print("%s, %s", "Uncleared Node Type: ", node_str(prov_type(node->msg)));
       }
-      break;
    }
+   #endif
    //*********************************
  }
  provenance_stop();
