@@ -36,7 +36,7 @@
 #define	LOG_FILE "/tmp/audit.log"
 #define gettid() syscall(SYS_gettid)
 #define WIN_SIZE 1
-#define WAIT_TIME 10
+#define WAIT_TIME 3
 #define STALL_TIME 1*WAIT_TIME
 
 static pthread_mutex_t l_log =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
