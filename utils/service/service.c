@@ -42,6 +42,7 @@
 static pthread_mutex_t l_log =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t c_lock_node = PTHREAD_MUTEX_INITIALIZER;
+static struct timespec t_cur;
 
 FILE *fp=NULL;
 
@@ -133,8 +134,6 @@ static inline bool clean_bothend(prov_entry_t *edge){
 }
 
 static inline bool clean_packet(struct hashable_node *to){
-  struct timespec t_cur;
-  clock_gettime(CLOCK_REALTIME, &t_cur);
   if (prov_type(to->msg) == ENT_PACKET && time_elapsed(to->t_exist, t_cur).tv_sec > STALL_TIME)
     return true;
   else
@@ -169,8 +168,6 @@ static inline void get_nodes(struct hashable_edge *edge,
 }
 
 static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hashable_node *from_node, struct hashable_node *to_node){
-  struct timespec t_cur;
-  clock_gettime(CLOCK_REALTIME, &t_cur);
   if (time_elapsed(edge->t_exist, t_cur).tv_sec < STALL_TIME)
     return false;
   #ifdef DEBUG
@@ -198,7 +195,6 @@ static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hasha
 }
 
 void process() {
-  struct timespec t_cur;
   struct hashable_node *from_node, *to_node;
   struct hashable_edge *edge, *tmp;
 
