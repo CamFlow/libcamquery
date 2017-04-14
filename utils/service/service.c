@@ -85,6 +85,7 @@ struct timespec time_elapsed(struct timespec start, struct timespec end) {
 
 struct hashable_node {
   prov_entry_t *msg;
+  struct timespec t_exist;
   struct node_identifier key;
   UT_hash_handle hh;
 };
@@ -129,6 +130,15 @@ static inline bool clean_bothend(prov_entry_t *edge){
   if (prov_type(edge) == RL_CLOSED || prov_type(edge) == RL_TERMINATE_PROCESS)
     return true;
   return false;
+}
+
+static inline bool clean_packet(struct hashable_node *to){
+  struct timespec t_cur;
+  clock_gettime(CLOCK_REALTIME, &t_cur);
+  if (prov_type(to->msg) == ENT_PACKET && time_elapsed(to->t_exist, t_cur).tv_sec > STALL_TIME)
+    return true;
+  else
+    return false;
 }
 
 static inline void delete_node(struct hashable_node *node){
@@ -210,7 +220,8 @@ void process() {
         } else if ( clean_bothend(edge->msg) ) {
           delete_node(from_node);
           delete_node(to_node);
-        }
+        } else if ( clean_packet(to_node) )
+          delete_node(to_node);
         delete_edge(edge);
       }else
         break;
@@ -238,6 +249,7 @@ bool filter(prov_entry_t* msg){
     node = (struct hashable_node*) malloc(sizeof(struct hashable_node));
     memset(node, 0, sizeof(struct hashable_node));
     node->msg = elt;
+    clock_gettime(CLOCK_REALTIME, &(node->t_exist));
     memcpy(&node->key, &(elt->node_info.identifier.node_id), sizeof(struct node_identifier));
     pthread_mutex_lock(&c_lock_node);
     HASH_ADD(hh, node_hash_table, key, sizeof(struct node_identifier), node);
