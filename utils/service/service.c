@@ -122,7 +122,8 @@ static inline bool clean_incoming(prov_entry_t *from,
   if (prov_type(edge) == RL_NAMED_PROCESS || prov_type(edge) == RL_NAMED)
     return true;
   if (prov_type(from) == ENT_PACKET
-      || prov_type(from) == ENT_XATTR)
+      || prov_type(from) == ENT_XATTR
+      || prov_type(from) == ENT_IATTR)
     return true;
   return false;
 }
