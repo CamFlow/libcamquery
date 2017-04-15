@@ -37,8 +37,7 @@
 #define gettid() syscall(SYS_gettid)
 #define WIN_SIZE 1
 #define WAIT_TIME 3
-#define STALL_TIME 1*WAIT_TIME
-#define SANITIZE_WAIT_TIME 10
+#define STALL_TIME 2*WAIT_TIME
 
 static pthread_mutex_t l_log =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
@@ -133,17 +132,6 @@ static inline bool clean_bothend(prov_entry_t *edge){
   if (prov_type(edge) == RL_CLOSED || prov_type(edge) == RL_TERMINATE_PROCESS)
     return true;
   return false;
-}
-
-static inline void sanitize_node_table(){
-  struct hashable_node *node, *tmp;
-  HASH_ITER(hh, node_hash_table, node, tmp) {
-    if ( (prov_type(node->msg) == ENT_PACKET || prov_type(node->msg) == ENT_FILE_NAME)
-            && time_elapsed(node->t_exist, t_cur).tv_sec > STALL_TIME) {
-              free(node->msg);
-              free(node);
-            }
-  }
 }
 
 static inline void delete_node(struct hashable_node *node){
@@ -310,10 +298,6 @@ int main(void){
    before_edge_table = HASH_COUNT(edge_hash_table);
    #endif
    process();
-   if (cnt == SANITIZE_WAIT_TIME) {
-     sanitize_node_table();
-     cnt = 0;
-   }
    #ifdef DEBUG
    after_node_table = HASH_COUNT(node_hash_table);
    after_edge_table = HASH_COUNT(edge_hash_table);
