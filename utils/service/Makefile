@@ -11,13 +11,13 @@ debug:
 	$(CCC) $(INCLUDES) service.c $(LIB) -o service.o $(CCFLAGS) -g
 
 install:
-	cp --force ./service.o /usr/bin/camflow-provenance
-	mkdir -p /var/relay
-	cp --force ./camflow-provenance.service /etc/systemd/system/camflow-provenance.service
-	systemctl enable camflow-provenance.service
+	sudo cp --force ./service.o /usr/bin/camflow-provenance
+	sudo mkdir -p /var/relay
+	sudo cp --force ./camflow-provenance.service /etc/systemd/system/camflow-provenance.service
+	sudo systemctl enable camflow-provenance.service
 
 restart:
-	systemctl restart camflow-provenance.service
+	sudo systemctl restart camflow-provenance.service
 
 analyze:
 	./script.sh > rst.txt &

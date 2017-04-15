@@ -67,7 +67,7 @@ void _init_logs( void ){
     pthread_mutex_unlock(&l_log);
 
 // per thread init
-void init( void ){
+static void init( void ){
  pid_t tid = gettid();
  print("audit writer thread, tid:%ld\n", tid);
 }
@@ -195,7 +195,7 @@ static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hasha
   return true;
 }
 
-void process() {
+static inline void process() {
   struct hashable_node *from_node, *to_node;
   struct hashable_edge *edge, *tmp;
 
@@ -227,12 +227,10 @@ void process() {
   }
 }
 
-bool filter(prov_entry_t* msg){
-  prov_entry_t* elt = malloc(sizeof(prov_entry_t));
+static inline void record(prov_entry_t* elt){
   struct hashable_edge *edge;
   struct hashable_node *node;
 
-  memcpy(elt, msg, sizeof(prov_entry_t));
   if(prov_is_relation(elt)) {
     edge = (struct hashable_edge*) malloc(sizeof(struct hashable_edge));
     memset(edge, 0, sizeof(struct hashable_edge));
@@ -252,16 +250,28 @@ bool filter(prov_entry_t* msg){
     HASH_ADD(hh, node_hash_table, key, sizeof(struct node_identifier), node);
     pthread_mutex_unlock(&c_lock_node);
   }
-  return false;
 }
 
-void log_error(char* err_msg){
+static void received_prov(union prov_elt* msg){
+  prov_entry_t* elt = (prov_entry_t*)malloc(sizeof(union prov_elt));
+  memcpy(elt, msg, sizeof(union prov_elt));
+  record(elt);
+}
+
+static void received_long_prov(union long_prov_elt* msg){
+  prov_entry_t* elt = (prov_entry_t*)malloc(sizeof(union long_prov_elt));
+  memcpy(elt, msg, sizeof(union long_prov_elt));
+  record(elt);
+}
+
+static void log_error(char* err_msg){
   print(err_msg);
 }
 
 struct provenance_ops ops = {
  .init=&init,
- .filter=&filter,
+ .received_prov=&received_prov,
+ .received_long_prov=&received_long_prov,
  .log_error=&log_error
 };
 
