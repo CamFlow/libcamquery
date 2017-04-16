@@ -1,7 +1,7 @@
-
 /*
  *
  * Author: Thomas Pasquier <tfjmp@g.harvard.edu>
+ * Author: Xueyuan Michael Han <hanx@g.harvard.edu>
  *
  * Copyright (C) 2017 Harvard University
  *
@@ -32,88 +32,23 @@
 #include "provenanceutils.h"
 #include "provenancePovJSON.h"
 #include "uthash.h"
+#include "node.h"
+#include "edge.h"
+#include "utils.h"
 
-#define	LOG_FILE "/tmp/audit.log"
 #define gettid() syscall(SYS_gettid)
 #define WIN_SIZE 1
 #define WAIT_TIME 3
 #define STALL_TIME 2*WAIT_TIME
 
-static pthread_mutex_t l_log =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t c_lock_node = PTHREAD_MUTEX_INITIALIZER;
+
 static struct timespec t_cur;
-
-FILE *fp=NULL;
-
-void _init_logs( void ){
- int n;
- fp = fopen(LOG_FILE, "a+");
- if(!fp){
-   printf("Cannot open file\n");
-   exit(-1);
- }
- n = fprintf(fp, "Starting audit service...\n");
- printf("%d\n", n);
-
- provenance_opaque_file(LOG_FILE, true);
-}
-
-#define print(fmt, ...)\
-    pthread_mutex_lock(&l_log);\
-    fprintf(fp, fmt, ##__VA_ARGS__);\
-    fprintf(fp, "\n");\
-    fflush(fp);\
-    pthread_mutex_unlock(&l_log);
 
 // per thread init
 static void init( void ){
  pid_t tid = gettid();
  print("audit writer thread, tid:%ld\n", tid);
 }
-
-struct timespec time_elapsed(struct timespec start, struct timespec end) {
-  struct timespec temp;
-  if ((end.tv_nsec - start.tv_nsec) < 0) {
-    temp.tv_sec = end.tv_sec - start.tv_sec - 1;
-    temp.tv_nsec = 1000000000 + end.tv_nsec - start.tv_nsec;
-  } else {
-    temp.tv_sec = end.tv_sec - start.tv_sec;
-    temp.tv_nsec = end.tv_nsec - start.tv_nsec;
-  }
-  return temp;
-}
-
-struct hashable_node {
-  prov_entry_t *msg;
-  struct timespec t_exist;
-  struct node_identifier key;
-  UT_hash_handle hh;
-};
-
-struct hashable_edge {
-  prov_entry_t *msg;
-  struct timespec t_exist;
-  struct relation_identifier key;
-  UT_hash_handle hh;
-};
-
-int edge_compare(struct hashable_edge* he1, struct hashable_edge* he2) {
-  uint32_t he1_id = he1->msg->relation_info.identifier.relation_id.id;
-  uint32_t he2_id = he2->msg->relation_info.identifier.relation_id.id;
-  uint32_t he1_boot = he1->msg->relation_info.identifier.relation_id.boot_id;
-  uint32_t he2_boot = he2->msg->relation_info.identifier.relation_id.boot_id;
-  if (he1_boot < he2_boot) return -1;
-  else if (he1_boot > he2_boot) return 1;
-  else {//if both edges are in the same boot, compare their ids
-    if (he1_id > he2_id) return 1;
-    else if (he1_id == he2_id) return 0;
-    else return -1;
-  }
-}
-
-static struct hashable_node *node_hash_table = NULL;
-static struct hashable_edge *edge_hash_table = NULL;
 
 static inline bool clean_incoming(prov_entry_t *from,
                                   prov_entry_t *edge){
@@ -134,31 +69,11 @@ static inline bool clean_bothend(prov_entry_t *edge){
   return false;
 }
 
-static inline void delete_node(struct hashable_node *node){
-  HASH_DEL(node_hash_table, node);
-  #ifdef DEBUG
-  print("%s %d %d %d %d", "Deleting the node: ", node->msg->node_info.identifier.node_id.type,
-  node->msg->node_info.identifier.node_id.id, node->msg->node_info.identifier.node_id.boot_id,
-  node->msg->node_info.identifier.node_id.version);
-  #endif
-  free(node->msg);
-  free(node);
-}
-
-static inline void delete_edge(struct hashable_edge *edge){
-  HASH_DEL(edge_hash_table, edge);
-  free(edge->msg);
-  free(edge);
-}
-
 static inline void get_nodes(struct hashable_edge *edge,
                               struct hashable_node **from_node,
                               struct hashable_node **to_node){
-  struct node_identifier from, to;
-  memcpy(&from, &edge->msg->relation_info.snd.node_id, sizeof(struct node_identifier));
-  memcpy(&to, &edge->msg->relation_info.rcv.node_id, sizeof(struct node_identifier));
-  HASH_FIND(hh, node_hash_table, &from, sizeof(struct node_identifier), *from_node);
-  HASH_FIND(hh, node_hash_table, &to, sizeof(struct node_identifier), *to_node);
+  *from_node = get_node(&edge->msg->relation_info.snd.node_id);
+  *to_node = get_node(&edge->msg->relation_info.rcv.node_id);
 }
 
 static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hashable_node *from_node, struct hashable_node *to_node){
@@ -184,7 +99,7 @@ static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hasha
   }
   #endif
   //*****************
-  delete_edge(edge);
+  delete_edge_nolock(edge);
   return true;
 }
 
@@ -217,33 +132,15 @@ static inline void process() {
       delete_node(from_node);
       delete_node(to_node);
     }
-    delete_edge(edge);
+    delete_edge_nolock(edge);
   }
 }
 
 static inline void record(prov_entry_t* elt){
-  struct hashable_edge *edge;
-  struct hashable_node *node;
-
-  if(prov_is_relation(elt)) {
-    edge = (struct hashable_edge*) malloc(sizeof(struct hashable_edge));
-    memset(edge, 0, sizeof(struct hashable_edge));
-    edge->msg = elt;
-    clock_gettime(CLOCK_REALTIME, &(edge->t_exist));
-    memcpy(&edge->key, &(elt->relation_info.identifier.relation_id), sizeof(struct relation_identifier));
-    pthread_mutex_lock(&c_lock_edge);
-    HASH_ADD(hh, edge_hash_table, key, sizeof(struct relation_identifier), edge);
-    pthread_mutex_unlock(&c_lock_edge);
-  } else{
-    node = (struct hashable_node*) malloc(sizeof(struct hashable_node));
-    memset(node, 0, sizeof(struct hashable_node));
-    node->msg = elt;
-    clock_gettime(CLOCK_REALTIME, &(node->t_exist));
-    memcpy(&node->key, &(elt->node_info.identifier.node_id), sizeof(struct node_identifier));
-    pthread_mutex_lock(&c_lock_node);
-    HASH_ADD(hh, node_hash_table, key, sizeof(struct node_identifier), node);
-    pthread_mutex_unlock(&c_lock_node);
-  }
+  if(prov_is_relation(elt))
+    insert_edge(elt);
+  else
+    insert_node(elt);
 }
 
 static void received_prov(union prov_elt* msg){
@@ -271,40 +168,28 @@ struct provenance_ops ops = {
 
 int main(void){
  int rc;
- int cnt = 0;
- char json[4096];
  unsigned int before_node_table, before_edge_table, after_node_table, after_edge_table;
- /*
- * For debug only
- */
- struct hashable_node *node, *tmp;
- //*******************
 	_init_logs();
- fprintf(fp, "Runtime query service pid: %ld\n", getpid());
+ print("Runtime query service pid: %ld\n", getpid());
  rc = provenance_register(&ops);
  if(rc<0){
-   fprintf(fp, "Failed registering audit operation (%d).\n", rc);
+   print("Failed registering audit operation (%d).\n", rc);
    exit(rc);
  }
- fprintf(fp, "=====STARTING====");
- fprintf(fp, "\n");
- fflush(fp);
+ print("=====STARTING====");
 
  while(1){
-   cnt = cnt + 1;
    pthread_mutex_lock(&c_lock_edge);
-   pthread_mutex_lock(&c_lock_node);
    HASH_SORT(edge_hash_table, edge_compare);
    #ifdef DEBUG
-   before_node_table = HASH_COUNT(node_hash_table);
-   before_edge_table = HASH_COUNT(edge_hash_table);
+   before_node_table = node_count();
+   before_edge_table = edge_count_nolock();
    #endif
    process();
    #ifdef DEBUG
-   after_node_table = HASH_COUNT(node_hash_table);
-   after_edge_table = HASH_COUNT(edge_hash_table);
+   after_node_table = node_count();
+   after_edge_table = edge_count_nolock();
    #endif
-   pthread_mutex_unlock(&c_lock_node);
    pthread_mutex_unlock(&c_lock_edge);
    #ifdef DEBUG
    print("%s %u", "Hash Table (Nodes) Size Before: ", before_node_table);
@@ -313,18 +198,6 @@ int main(void){
    print("%s %u", "Hash Table (Edges) Size After: ", after_edge_table);
    #endif
    sleep(1);
-   /*
-   * For debug only
-   * Find out the type of the remaining nodes still in the node hash table
-   */
-   //#ifdef DEBUG
-   if (HASH_COUNT(edge_hash_table) == 0) {
-      HASH_ITER(hh, node_hash_table, node, tmp) {
-        print("%s, %s", "Uncleared Node Type: ", node_str(prov_type(node->msg)));
-      }
-   }
-   //#endif
-   //*********************************
  }
  provenance_stop();
  return 0;
