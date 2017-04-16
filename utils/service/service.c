@@ -194,28 +194,30 @@ static inline void process() {
 
   clock_gettime(CLOCK_REALTIME, &t_cur);
   HASH_ITER(hh, edge_hash_table, edge, tmp) {
+    // too recent we come back later.
+    if (time_elapsed(edge->t_exist, t_cur).tv_sec < WAIT_TIME)
+      return;
     get_nodes(edge, &from_node, &to_node);
-    if (from_node && to_node) {
-      //print("=====Found Both Nodes======");
-      if (time_elapsed(edge->t_exist, t_cur).tv_sec >= WAIT_TIME) {
-        #ifdef DEBUG
-        print("======Processing an edge======");
-        #endif
+    if (!from_node || !to_node) { // we cannot find one of the node
+      if(handle_missing_nodes(edge, from_node, to_node))
+        continue;
+      else
+        return;
+    }
+    #ifdef DEBUG
+    print("======Processing an edge======");
+    #endif
 
-        /*
-        * GARBAGE COLLECTION
-        */
-        if ( clean_incoming(from_node->msg, edge->msg) ) {
-          delete_node(from_node);
-        } else if ( clean_bothend(edge->msg) ) {
-          delete_node(from_node);
-          delete_node(to_node);
-        }
-        delete_edge(edge);
-      }else
-        break;
-    }else if ( !handle_missing_nodes(edge, from_node, to_node) )
-        break;
+    /*
+    * GARBAGE COLLECTION
+    */
+    if ( clean_incoming(from_node->msg, edge->msg) ) {
+      delete_node(from_node);
+    } else if ( clean_bothend(edge->msg) ) {
+      delete_node(from_node);
+      delete_node(to_node);
+    }
+    delete_edge(edge);
   }
 }
 
