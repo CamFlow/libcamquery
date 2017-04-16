@@ -45,7 +45,7 @@ static inline void delete_node(struct hashable_node *node){
   HASH_DEL(node_hash_table, node);
   pthread_mutex_unlock(&c_lock_node);
 #ifdef DEBUG
-  print("%s %d %d %d %d", "Deleting the node: ", node->msg->node_info.identifier.node_id.type,
+  print("Deleting the node: %d %d %d %d", node->msg->node_info.identifier.node_id.type,
   node->msg->node_info.identifier.node_id.id, node->msg->node_info.identifier.node_id.boot_id,
   node->msg->node_info.identifier.node_id.version);
 #endif

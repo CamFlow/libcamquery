@@ -81,16 +81,16 @@ static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hasha
     return false;
 #ifdef DEBUG
   print("****THIS EDGE HAS BEEN STALLED TOO LONG****");
-  print("%s %s", "Stuck Edge Type: ", relation_str(prov_type(edge->msg)));
+  print("Stuck Edge Type: %s", relation_str(prov_type(edge->msg)));
   if (from_node == NULL) {
-    print("%s %s", "Stuck Edge From Node Type: ", node_str(edge->msg->relation_info.snd.node_id.type));
-    print("%s %d %d %d %d", "Stuck node id: ", edge->msg->relation_info.snd.node_id.type,
+    print("Stuck Edge From Node Type: %s", node_str(edge->msg->relation_info.snd.node_id.type));
+    print("Stuck node id: %d %d %d %d", edge->msg->relation_info.snd.node_id.type,
     edge->msg->relation_info.snd.node_id.id, edge->msg->relation_info.snd.node_id.boot_id,
     edge->msg->relation_info.snd.node_id.version);
   }
   if (to_node == NULL) {
-    print("%s %s", "Stuck Edge To Node Type: ", node_str(edge->msg->relation_info.rcv.node_id.type));
-    print("%s %d %d %d %d", "Stuck node id: ", edge->msg->relation_info.rcv.node_id.type,
+    print("Stuck Edge To Node Type: %s", node_str(edge->msg->relation_info.rcv.node_id.type));
+    print("Stuck node id: %d %d %d %d", edge->msg->relation_info.rcv.node_id.type,
     edge->msg->relation_info.rcv.node_id.id, edge->msg->relation_info.rcv.node_id.boot_id,
     edge->msg->relation_info.rcv.node_id.version);
   }
@@ -188,10 +188,10 @@ int main(void){
 #endif
     pthread_mutex_unlock(&c_lock_edge);
 #ifdef DEBUG
-    print("%s %u", "Hash Table (Nodes) Size Before: ", before_node_table);
-    print("%s %u", "Hash Table (Edges) Size Before: ", before_edge_table);
-    print("%s %u", "Hash Table (Nodes) Size After: ", after_node_table);
-    print("%s %u", "Hash Table (Edges) Size After: ", after_edge_table);
+    print("Hash Table (Nodes) Size Before: %u", before_node_table);
+    print("Hash Table (Edges) Size Before: %u", before_edge_table);
+    print("Hash Table (Nodes) Size After: %u", after_node_table);
+    print("Hash Table (Edges) Size After: %u", after_edge_table);
 #endif
     sleep(1);
   }
