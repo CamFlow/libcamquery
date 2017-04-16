@@ -46,8 +46,8 @@ static struct timespec t_cur;
 
 // per thread init
 static void init( void ){
- pid_t tid = gettid();
- print("audit writer thread, tid:%ld\n", tid);
+  pid_t tid = gettid();
+  print("audit writer thread, tid:%ld\n", tid);
 }
 
 static inline bool clean_incoming(prov_entry_t *from,
@@ -79,11 +79,8 @@ static inline void get_nodes(struct hashable_edge *edge,
 static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hashable_node *from_node, struct hashable_node *to_node){
   if (time_elapsed(edge->t_exist, t_cur).tv_sec < STALL_TIME)
     return false;
-  #ifdef DEBUG
+#ifdef DEBUG
   print("****THIS EDGE HAS BEEN STALLED TOO LONG****");
-  /*
-  * For debug only
-  */
   print("%s %s", "Stuck Edge Type: ", relation_str(prov_type(edge->msg)));
   if (from_node == NULL) {
     print("%s %s", "Stuck Edge From Node Type: ", node_str(edge->msg->relation_info.snd.node_id.type));
@@ -97,7 +94,7 @@ static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hasha
     edge->msg->relation_info.rcv.node_id.id, edge->msg->relation_info.rcv.node_id.boot_id,
     edge->msg->relation_info.rcv.node_id.version);
   }
-  #endif
+#endif
   //*****************
   delete_edge_nolock(edge);
   return true;
@@ -119,10 +116,9 @@ static inline void process() {
       else
         return;
     }
-    #ifdef DEBUG
+#ifdef DEBUG
     print("======Processing an edge======");
-    #endif
-
+#endif
     /*
     * GARBAGE COLLECTION
     */
@@ -160,45 +156,45 @@ static void log_error(char* err_msg){
 }
 
 struct provenance_ops ops = {
- .init=&init,
- .received_prov=&received_prov,
- .received_long_prov=&received_long_prov,
- .log_error=&log_error
+  .init=&init,
+  .received_prov=&received_prov,
+  .received_long_prov=&received_long_prov,
+  .log_error=&log_error
 };
 
 int main(void){
- int rc;
- unsigned int before_node_table, before_edge_table, after_node_table, after_edge_table;
-	_init_logs();
- print("Runtime query service pid: %ld\n", getpid());
- rc = provenance_register(&ops);
- if(rc<0){
-   print("Failed registering audit operation (%d).\n", rc);
-   exit(rc);
- }
- print("=====STARTING====");
+  int rc;
+  unsigned int before_node_table, before_edge_table, after_node_table, after_edge_table;
 
- while(1){
-   pthread_mutex_lock(&c_lock_edge);
-   HASH_SORT(edge_hash_table, edge_compare);
-   #ifdef DEBUG
-   before_node_table = node_count();
-   before_edge_table = edge_count_nolock();
-   #endif
-   process();
-   #ifdef DEBUG
-   after_node_table = node_count();
-   after_edge_table = edge_count_nolock();
-   #endif
-   pthread_mutex_unlock(&c_lock_edge);
-   #ifdef DEBUG
-   print("%s %u", "Hash Table (Nodes) Size Before: ", before_node_table);
-   print("%s %u", "Hash Table (Edges) Size Before: ", before_edge_table);
-   print("%s %u", "Hash Table (Nodes) Size After: ", after_node_table);
-   print("%s %u", "Hash Table (Edges) Size After: ", after_edge_table);
-   #endif
-   sleep(1);
- }
- provenance_stop();
- return 0;
+  _init_logs();
+  print("Runtime query service pid: %ld\n", getpid());
+  rc = provenance_register(&ops);
+  if(rc<0){
+    print("Failed registering audit operation (%d).\n", rc);
+    exit(rc);
+  }
+  print("=====STARTING====");
+  while(1){
+    pthread_mutex_lock(&c_lock_edge);
+    HASH_SORT(edge_hash_table, edge_compare);
+#ifdef DEBUG
+    before_node_table = node_count();
+    before_edge_table = edge_count_nolock();
+#endif
+    process();
+#ifdef DEBUG
+    after_node_table = node_count();
+    after_edge_table = edge_count_nolock();
+#endif
+    pthread_mutex_unlock(&c_lock_edge);
+#ifdef DEBUG
+    print("%s %u", "Hash Table (Nodes) Size Before: ", before_node_table);
+    print("%s %u", "Hash Table (Edges) Size Before: ", before_edge_table);
+    print("%s %u", "Hash Table (Nodes) Size After: ", after_node_table);
+    print("%s %u", "Hash Table (Edges) Size After: ", after_edge_table);
+#endif
+    sleep(1);
+  }
+  provenance_stop();
+  return 0;
 }
