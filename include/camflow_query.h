@@ -20,8 +20,6 @@
 
 typedef uint64_t label_t;
 
-#define assign_label(name, str) name = generate_label(str)
-
 #define register_query(init_fcn, in_fcn, out_fcn)\
 struct provenance_query_hooks hooks = {\
   QUERY_HOOK_INIT(out_edge, out_fcn),\
@@ -51,7 +49,9 @@ static inline int puts(const char *str){
   return 0;
 }
 
-#define printf(fmt, ...) pr_info(fmt, ##__VA_ARGS__)
+#define print(fmt, ...) pr_info(fmt, ##__VA_ARGS__)
+
+#define assign_label(name, str) name = generate_label(str)
 
 static inline bool has_label(prov_entry_t* elmt, label_t label){
   return prov_bloom_in(prov_taint(elmt), label);

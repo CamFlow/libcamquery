@@ -5,12 +5,13 @@ LIB = /usr/local/lib/provenancelib.a -lpthread -lz -lrt -llmdb
 .SUFFIXES: .c
 
 all:
-	$(CCC) $(INCLUDES) service.c $(LIB) -o service.o $(CCFLAGS)
+	$(CCC) $(INCLUDES) query.c $(LIB) -o service.o $(CCFLAGS)
 
 debug:
-	$(CCC) $(INCLUDES) service.c $(LIB) -o service.o $(CCFLAGS) -g
+	$(CCC) $(INCLUDES) query.c $(LIB) -o service.o $(CCFLAGS) -g
 
 install:
+	echo $(uname -r)
 	sudo cp --force ./service.o /usr/bin/camflow-provenance
 	sudo mkdir -p /var/relay
 	sudo cp --force ./camflow-provenance.service /etc/systemd/system/camflow-provenance.service

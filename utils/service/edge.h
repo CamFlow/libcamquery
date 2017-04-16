@@ -18,15 +18,15 @@
 #include <pthread.h>
 #include "utils.h"
 
-static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
-static struct hashable_edge *edge_hash_table = NULL;
-
 struct hashable_edge {
   prov_entry_t *msg;
   struct timespec t_exist;
   struct relation_identifier key;
   UT_hash_handle hh;
 };
+
+static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
+static struct hashable_edge *edge_hash_table = NULL;
 
 int edge_compare(struct hashable_edge* he1, struct hashable_edge* he2) {
   uint32_t he1_id = he1->msg->relation_info.identifier.relation_id.id;

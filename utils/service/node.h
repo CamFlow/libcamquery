@@ -18,15 +18,15 @@
 #include <pthread.h>
 #include "utils.h"
 
-static pthread_mutex_t c_lock_node = PTHREAD_MUTEX_INITIALIZER;
-static struct hashable_node *node_hash_table = NULL;
-
 struct hashable_node {
   prov_entry_t *msg;
   struct timespec t_exist;
   struct node_identifier key;
   UT_hash_handle hh;
 };
+
+static pthread_mutex_t c_lock_node = PTHREAD_MUTEX_INITIALIZER;
+static struct hashable_node *node_hash_table = NULL;
 
 static inline int insert_node(prov_entry_t *elt){
   struct hashable_node *node;

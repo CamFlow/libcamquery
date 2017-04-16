@@ -11,6 +11,9 @@
  *	(at your option) any later version.
  *
  */
+#ifndef ___LIB_QUERY_QUERY_H
+#define ___LIB_QUERY_QUERY_H
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,15 +40,35 @@
 #include "utils.h"
 
 #define gettid() syscall(SYS_gettid)
+
+#define CAMFLOW_RAISE_WARNING -1
+
 #define WIN_SIZE 1
 #define WAIT_TIME 3
 #define STALL_TIME 2*WAIT_TIME
 
+int (*out_edge_ptr)(prov_entry_t*, prov_entry_t*)=NULL;
+int (*in_edge_ptr)(prov_entry_t*, prov_entry_t*)=NULL;
+
+static struct hashable_query *query_hash_table = NULL;
+
+static inline void runquery(prov_entry_t *from, prov_entry_t *edge, prov_entry_t *to){
+  struct hashable_query *query, *tmp;
+  int rc=0;
+  rc = out_edge_ptr(from, edge);
+  if(rc<0){
+    print("out: %d", rc);
+  }
+  rc = in_edge_ptr(edge, to);
+  if(rc<0){
+    print("in: %d", rc);
+  }
+}
 
 static struct timespec t_cur;
 
 // per thread init
-static void init( void ){
+static void ___init( void ){
   pid_t tid = gettid();
   print("audit writer thread, tid:%ld\n", tid);
 }
@@ -79,23 +102,6 @@ static inline void get_nodes(struct hashable_edge *edge,
 static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hashable_node *from_node, struct hashable_node *to_node){
   if (time_elapsed(edge->t_exist, t_cur).tv_sec < STALL_TIME)
     return false;
-#ifdef DEBUG
-  print("****THIS EDGE HAS BEEN STALLED TOO LONG****");
-  print("Stuck Edge Type: %s", relation_str(prov_type(edge->msg)));
-  if (from_node == NULL) {
-    print("Stuck Edge From Node Type: %s", node_str(edge->msg->relation_info.snd.node_id.type));
-    print("Stuck node id: %d %d %d %d", edge->msg->relation_info.snd.node_id.type,
-    edge->msg->relation_info.snd.node_id.id, edge->msg->relation_info.snd.node_id.boot_id,
-    edge->msg->relation_info.snd.node_id.version);
-  }
-  if (to_node == NULL) {
-    print("Stuck Edge To Node Type: %s", node_str(edge->msg->relation_info.rcv.node_id.type));
-    print("Stuck node id: %d %d %d %d", edge->msg->relation_info.rcv.node_id.type,
-    edge->msg->relation_info.rcv.node_id.id, edge->msg->relation_info.rcv.node_id.boot_id,
-    edge->msg->relation_info.rcv.node_id.version);
-  }
-#endif
-  //*****************
   delete_edge_nolock(edge);
   return true;
 }
@@ -116,12 +122,7 @@ static inline void process() {
       else
         return;
     }
-#ifdef DEBUG
-    print("======Processing an edge======");
-#endif
-    /*
-    * GARBAGE COLLECTION
-    */
+    runquery(from_node->msg, edge->msg, to_node->msg);
     if ( clean_incoming(from_node->msg, edge->msg) ) {
       delete_node(from_node);
     } else if ( clean_bothend(edge->msg) ) {
@@ -156,45 +157,46 @@ static void log_error(char* err_msg){
 }
 
 struct provenance_ops ops = {
-  .init=&init,
+  .init=&___init,
   .received_prov=&received_prov,
   .received_long_prov=&received_long_prov,
   .log_error=&log_error
 };
 
-int main(void){
-  int rc;
-  unsigned int before_node_table, before_edge_table, after_node_table, after_edge_table;
-
-  _init_logs();
-  print("Runtime query service pid: %ld\n", getpid());
-  rc = provenance_register(&ops);
-  if(rc<0){
-    print("Failed registering audit operation (%d).\n", rc);
-    exit(rc);
-  }
-  print("=====STARTING====");
-  while(1){
-    pthread_mutex_lock(&c_lock_edge);
-    HASH_SORT(edge_hash_table, edge_compare);
-#ifdef DEBUG
-    before_node_table = node_count();
-    before_edge_table = edge_count_nolock();
-#endif
-    process();
-#ifdef DEBUG
-    after_node_table = node_count();
-    after_edge_table = edge_count_nolock();
-#endif
-    pthread_mutex_unlock(&c_lock_edge);
-#ifdef DEBUG
-    print("Hash Table (Nodes) Size Before: %u", before_node_table);
-    print("Hash Table (Edges) Size Before: %u", before_edge_table);
-    print("Hash Table (Nodes) Size After: %u", after_node_table);
-    print("Hash Table (Edges) Size After: %u", after_edge_table);
-#endif
-    sleep(1);
-  }
-  provenance_stop();
-  return 0;
+#define register_query(init_fcn, in_fcn, out_fcn)\
+int main(void){\
+  int rc;\
+  _init_logs();\
+  in_edge_ptr=in_fcn;\
+  out_edge_ptr=out_fcn;\
+  init_fcn();\
+  print("Runtime query service pid: %ld\n", getpid());\
+  rc = provenance_register(&ops);\
+  if(rc<0){\
+    print("Failed registering audit operation (%d).\n", rc);\
+    exit(rc);\
+  }\
+  while(1){\
+    pthread_mutex_lock(&c_lock_edge);\
+    HASH_SORT(edge_hash_table, edge_compare);\
+    process();\
+    pthread_mutex_unlock(&c_lock_edge);\
+    sleep(1);\
+  }\
+  provenance_stop();\
+  return 0;\
 }
+
+typedef uint64_t label_t;
+
+#define assign_label(name, str) name = generate_label(str)
+
+static inline bool has_label(prov_entry_t* elmt, label_t label){
+  return prov_bloom_in(prov_taint(elmt), label);
+}
+
+static inline void add_label(prov_entry_t* elmt, label_t label){
+  prov_bloom_add(prov_taint(elmt), label);
+}
+
+ #endif
