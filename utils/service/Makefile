@@ -1,7 +1,7 @@
 INCLUDES = -I../build/SimpleLogger -I../build/inih -I../../build/uthash/src
 CCFLAGS = -g -O2 -fpic
 CCC = gcc
-LIB = /usr/local/lib/provenancelib.a -lpthread -lz -lrt -llmdb
+LIB = /usr/local/lib/provenancelib.a -lpthread -lz -lrt
 .SUFFIXES: .c
 
 all:
