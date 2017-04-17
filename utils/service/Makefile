@@ -48,5 +48,8 @@ run_postmark:
 	cd build/postmark && ./postmark
 	sudo camflow -a false
 
+prepare_single:
+	
+
 clean:
 	rm -f service.o
