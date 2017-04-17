@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/bash
 
 while read -r cpuid cpu
 do
@@ -28,17 +28,17 @@ do
 done < $1
 
 #Must remove the first line of all corex_cpu.txt file
-num0=0.0
-num1=0.0
-num2=0.0
-num3=0.0
+num0=0
+num1=0
+num2=0
+num3=0
 
 while read -r cpu
 do
 	if [ "$cpu" == "%CPU" ]
 	then
 		echo "$num0" >> "core0_cpu.txt"
-		num0=0.0
+		num0=0
 	else
 		num0=`echo $num0 + $cpu | bc`
 	fi
@@ -49,7 +49,7 @@ do
 	if [ "$cpu" == "%CPU" ]
 	then
 		echo "$num1" >> "core1_cpu.txt"
-		num1=0.0
+		num1=0
 	else
 		num1=`echo $num1 + $cpu | bc`
 	fi
@@ -60,7 +60,7 @@ do
 	if [ "$cpu" == "%CPU" ]
 	then
 		echo "$num2" >> "core2_cpu.txt"
-		num2=0.0
+		num2=0
 	else
 		num2=`echo $num2 + $cpu | bc`
 	fi
@@ -71,7 +71,7 @@ do
 	if [ "$cpu" == "%CPU" ]
 	then
 		echo "$num3" >> "core3_cpu.txt"
-		num3=0.0
+		num3=0
 	else
 		num3=`echo $num3 + $cpu | bc`
 	fi
