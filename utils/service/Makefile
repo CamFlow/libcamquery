@@ -25,8 +25,27 @@ analyze:
 	#sudo camflow --track-file Makefile propagate
 	sudo camflow -a true
 
-benchmark:
+run_kernel:
 	phoronix-test-suite benchmark pts/build-linux-kernel-1.7.0
+	sudo camflow -a false
+
+run_unpack:
+	phoronix-test-suite benchmark pts/unpack-linux-1.0.0
+	sudo camflow -a false
+
+prepare_postmark:
+	@echo "Preparing postmark"
+	mkdir -p build/postmark
+	cp -f src/postmark-1_5.c build/postmark/postmark-1_5.c
+	cd build/postmark && cc -o postmark postmark-1_5.c
+	@echo "Please ignore warning"
+
+run_postmark:
+	@echo "set size 4096 102400"
+	@echo "set subdirectories 10"
+	@echo "set number 4500"
+	@echo "set transactions 1500000"
+	cd build/postmark && ./postmark
 	sudo camflow -a false
 
 clean:
