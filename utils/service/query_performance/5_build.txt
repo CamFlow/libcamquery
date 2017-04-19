@@ -15,19 +15,19 @@ Timed Linux Kernel Compilation 4.9:
     pts/build-linux-kernel-1.7.0
     Test 1 of 1
     Estimated Trial Run Count:    3
-    Estimated Time To Completion: 23 Minutes (11:39 EDT)
-        Running Pre-Test Script @ 11:16:45
-        Started Run 1 @ 11:17:06
-        Running Interim Test Script @ 11:24:03
-        Started Run 2 @ 11:24:11
-        Running Interim Test Script @ 11:31:03
-        Started Run 3 @ 11:31:12  [Std. Dev: 0.64%]
-        Running Post-Test Script @ 11:38:05
+    Estimated Time To Completion: 23 Minutes (15:15 EDT)
+        Running Pre-Test Script @ 14:53:36
+        Started Run 1 @ 14:53:57
+        Running Interim Test Script @ 15:00:57
+        Started Run 2 @ 15:01:06
+        Running Interim Test Script @ 15:08:01
+        Started Run 3 @ 15:08:10  [Std. Dev: 0.67%]
+        Running Post-Test Script @ 15:15:05
 
     Test Results:
-        415.96462416649
-        411.23726415634
-        411.55010890961
+        418.78884196281
+        414.00292992592
+        413.88061380386
 
-    Average: 412.92 Seconds
+    Average: 415.56 Seconds
 
