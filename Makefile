@@ -56,8 +56,8 @@ load_100:
 	done
 	sudo modprobe query
 
-load_250:
-	for number in {1..249}; \
+load_200:
+	for number in {1..199}; \
 	do \
 		echo $$number;\
 		cp -r . ../query$$number; \
