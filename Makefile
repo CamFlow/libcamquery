@@ -42,5 +42,33 @@ load_10:
 	done
 	sudo modprobe query
 
+load_100:
+	for number in {1..99}; \
+	do \
+		echo $$number;\
+		cp -r . ../query$$number; \
+		cd ../query$$number && mv query.c query$$number.c;\
+		cd ../query$$number && sed -i -e "s/obj-m+=query.o/obj-m+=query$$number.o/g" Makefile;\
+		cd ../query$$number && sed -i -e "s/sudo modprobe query/sudo modprobe query$$number/g" Makefile;\
+		cd ../query$$number && $(MAKE) all;\
+		cd ../query$$number && $(MAKE) load;\
+		cd ../camflow-query;\
+	done
+	sudo modprobe query
+
+load_250:
+	for number in {1..249}; \
+	do \
+		echo $$number;\
+		cp -r . ../query$$number; \
+		cd ../query$$number && mv query.c query$$number.c;\
+		cd ../query$$number && sed -i -e "s/obj-m+=query.o/obj-m+=query$$number.o/g" Makefile;\
+		cd ../query$$number && sed -i -e "s/sudo modprobe query/sudo modprobe query$$number/g" Makefile;\
+		cd ../query$$number && $(MAKE) all;\
+		cd ../query$$number && $(MAKE) load;\
+		cd ../camflow-query;\
+	done
+	sudo modprobe query
+
 unload:
 	sudo rmmod query

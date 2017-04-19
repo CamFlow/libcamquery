@@ -1,0 +1,32 @@
+System Information
+
+Hardware:
+Processor: Intel Core i3 530 @ 2.93GHz (4 Cores), Motherboard: BIOSTAR TH55B HD v6.0, Chipset: Intel Core DRAM, Memory: 8192MB, Disk: 500GB Seagate ST3500418AS + 160GB Seagate ST3160815AS, Graphics: Intel Core IGP, Audio: Realtek ALC662 rev1, Monitor: IBM T860, Network: Realtek RTL8111/8168/8411
+
+Software:
+OS: Fedora 25, Kernel: 4.10.10camflow-0.3.0 (x86_64), Desktop: GNOME Shell 3.22.1, Display Server: Wayland, OpenGL: 2.1 Mesa 13.0.4, Compiler: GCC 6.3.1 20161221 + Clang 3.9.1, File-System: ext4, Screen Resolution: 1280x1024
+
+Current Description: Intel Core i3 530 testing with a BIOSTAR TH55B HD v6.0 and Intel Core IGP on Fedora 25 via the Phoronix Test Suite.
+
+New Description: 
+
+
+Timed Linux Kernel Compilation 4.9:
+    pts/build-linux-kernel-1.7.0
+    Test 1 of 1
+    Estimated Trial Run Count:    3
+    Estimated Time To Completion: 23 Minutes (12:13 EDT)
+        Running Pre-Test Script @ 11:50:42
+        Started Run 1 @ 11:51:02
+        Running Interim Test Script @ 11:57:59
+        Started Run 2 @ 11:58:08
+        Running Interim Test Script @ 12:05:02
+        Started Run 3 @ 12:05:11  [Std. Dev: 0.64%]
+        Running Post-Test Script @ 12:12:03
+
+    Test Results:
+        416.4484899044
+        413.14508509636
+        411.24791884422
+
+    Average: 413.61 Seconds
