@@ -18,21 +18,25 @@
 #include <pthread.h>
 #include "utils.h"
 
-#define MAX_BUNDLE 100
+#define MAX_BUNDLE 500
 
 static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
 
 struct bundle {
   struct edge *list[MAX_BUNDLE];
-  prov_entry_t *last[MAX_BUNDLE];
+  prov_entry_t *  last[MAX_BUNDLE];
 } bundle;
 
 struct edge
 {
     prov_entry_t *msg;
     struct timespec t_exist;
-    struct node *next;
+    struct edge *next;
 };
+
+struct edge* bundle_head(){
+  return bundle.list[0];
+}
 
 static inline bool edge_greater_than(prov_entry_t *edge1, prov_entry_t *edge2) {
   uint32_t he1_id = edge1->relation_info.identifier.relation_id.id;
@@ -41,18 +45,20 @@ static inline bool edge_greater_than(prov_entry_t *edge1, prov_entry_t *edge2) {
   uint32_t he2_boot = edge2->relation_info.identifier.relation_id.boot_id;
   if (he1_boot > he2_boot)
     return true;
-  else if (he1_id > he2_id)
+  else if(he1_boot < he2_boot)
+    return false;
+  if (he1_id > he2_id)
     return true;
   return false;
 }
 
-void append(struct edge **list, prov_entry_t* msg)
+static inline void append(struct edge **list, prov_entry_t* msg)
 {
     struct edge *temp,*right;
     struct edge *head;
     head = *list;
     temp= (struct edge *)malloc(sizeof(struct edge));
-    clock_gettime(CLOCK_REALTIME, &(edge->t_exist));
+    clock_gettime(CLOCK_REALTIME, &(temp->t_exist));
     temp->msg = msg;
     if (head == NULL)
     {
@@ -60,7 +66,7 @@ void append(struct edge **list, prov_entry_t* msg)
       (*list)->next=NULL;
       return;
     }
-    right=(struct node *)head;
+    right=head;
     while(right->next != NULL)
       right=right->next;
     right->next =temp;
@@ -68,56 +74,66 @@ void append(struct edge **list, prov_entry_t* msg)
     right->next=NULL;
 }
 
-
-
-void insert(struct edge **list, struct edge *edge){
-    struct edge *temp;
-    temp=*list;
-    if (temp==NULL) {
-      append(list, edge);
-    } else {
-      while(temp!=NULL)
-      {
-          if(temp->next==NULL) {
-            temp->next = edge;
-          } else {
-            if( edge_greater_than(temp->next, edge->msg) ) {
-              edge->next = temp->next;
-              temp->next = edge;
-              return;
-            }
-          }
-          temp = temp->next;
-      }
-    }
-}
-
-struct edge* pop(struct edge **list){
-  struct edge *tmp = (*list);
-  (*list) = tmp->next;
-  return tmp;
-}
-
-void merge(struct edge **main, sturct edge *small){
-  struct  edge *tmp = pop(&small);
-  while(tmp!=NULL){
-    insert(main, tmp);
-  }
-}
-
-void  display(struct edge *r)
+static inline void  display(struct edge *r)
 {
     if(r==NULL)
       return;
     while(r!=NULL)
     {
-      printf("%d",r->msg->relation_info.identifier.relation_id.id);
+      printf("Entry: %d \t %lld\n", relation_identifier(r->msg).boot_id, relation_identifier(r->msg).id);
       r=r->next;
-      printf("\n");
     }
 }
 
-int count(struct edge *n)
+static inline void move_node(struct edge **dest, struct edge **src){
+  struct edge *n = *src;
+  if(n==NULL)
+    return;
+  *src = n->next;
+  n->next = *dest;
+  *dest = n;
+}
+
+static inline struct edge* sorted_merge(struct edge *a, struct edge *b){
+    struct edge *result = NULL;
+    struct edge **last = &result;
+
+    while(1){
+      if(a==NULL){
+        *last=b;
+        break;
+      }else if (b==NULL){
+        *last=a;
+        break;
+      }
+      if(edge_greater_than(b->msg, a->msg)){
+        move_node(last, &a);
+      }else{
+        move_node(last, &b);
+      }
+      last = &((*last)->next);
+    }
+    return result;
+}
+
+struct edge* edge_pop(struct edge **list){
+  struct edge *tmp = (*list);
+  if(tmp==NULL)
+    return NULL;
+  (*list) = tmp->next;
+  tmp->next=NULL;
+  return tmp;
+}
+
+/*void edge_merge(struct edge **main, struct edge *small){
+  struct  edge *tmp = edge_pop(&small);
+  while(tmp!=NULL){
+    insert(main, tmp);
+    tmp = edge_pop(&small);
+  }
+}*/
+
+static inline int count(struct edge *n)
 {
     int c=0;
     while(n!=NULL)
@@ -128,33 +144,42 @@ int count(struct edge *n)
     return c;
 }
 
-void insert_in_bundle(prov_entry_t *elt){
+static inline void display_bundle(){
   int i;
   for(i=0; i<MAX_BUNDLE; i++){
     if(bundle.list[i]==NULL){
-      append(bundle.list[i], elt);
+      return;
+    }
+    display(bundle.list[i]);
+  }
+}
+
+static inline void insert_in_bundle(prov_entry_t *elt){
+  int i;
+  for(i=0; i<MAX_BUNDLE; i++){
+    if(bundle.list[i]==NULL){
+      append(&bundle.list[i], elt);
       bundle.last[i]=elt;
       return;
     }else if(edge_greater_than(elt, bundle.last[i])){
-      append(bundle.list[i], elt);
+      append(&bundle.list[i], elt);
       bundle.last[i]=elt;
       return;
     }
   }
 }
 
-void merge_bundle() {
+static inline void merge_bundle() {
   int i;
   for(i=1; i<MAX_BUNDLE; i++){
     if(bundle.last[i]==NULL)
       return;
-    merge(&bundle.list[0], bundle.list[i]);
+    bundle.list[0] = sorted_merge(bundle.list[0], bundle.list[i]);
     bundle.list[i]=NULL;
   }
 }
 
 static inline int insert_edge(prov_entry_t *elt){
-  memcpy(&edge->key, &(elt->relation_info.identifier.relation_id), sizeof(struct relation_identifier));
   pthread_mutex_lock(&c_lock_edge);
   insert_in_bundle(elt);
   pthread_mutex_unlock(&c_lock_edge);
@@ -167,6 +192,17 @@ static inline uint32_t edge_count_nolock(void){
     if(bundle.list[i]==NULL)
       return c;
     c+=count(bundle.list[i]);
+  }
+  return c;
+}
+
+static inline uint32_t bundle_count_nolock(void){
+  int i;
+  uint32_t c=0;
+  for(i=0; i<MAX_BUNDLE; i++){
+    if(bundle.list[i]==NULL)
+      return c;
+    c++;
   }
   return c;
 }

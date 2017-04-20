@@ -44,8 +44,8 @@
 #define CAMFLOW_RAISE_WARNING -1
 
 #define WIN_SIZE 1
-#define WAIT_TIME 3
-#define STALL_TIME 2*WAIT_TIME
+#define WAIT_TIME 1
+#define STALL_TIME 1*WAIT_TIME
 
 int (*out_edge_ptr)(prov_entry_t*, prov_entry_t*)=NULL;
 int (*in_edge_ptr)(prov_entry_t*, prov_entry_t*)=NULL;
@@ -92,44 +92,57 @@ static inline bool clean_bothend(prov_entry_t *edge){
   return false;
 }
 
-static inline void get_nodes(struct hashable_edge *edge,
+static inline void get_nodes(struct edge *edge,
                               struct hashable_node **from_node,
                               struct hashable_node **to_node){
   *from_node = get_node(&edge->msg->relation_info.snd.node_id);
   *to_node = get_node(&edge->msg->relation_info.rcv.node_id);
 }
 
-static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hashable_node *from_node, struct hashable_node *to_node){
+static inline bool handle_missing_nodes(struct edge *edge, struct hashable_node *from_node, struct hashable_node *to_node){
   if (time_elapsed(edge->t_exist, t_cur).tv_sec < STALL_TIME)
     return false;
-  delete_edge_nolock(edge);
+  free(edge->msg);
+  free(edge);
   return true;
 }
 
 static inline void process() {
   struct hashable_node *from_node, *to_node;
-  struct hashable_edge *edge, *tmp;
-
+  struct edge* edge;
   clock_gettime(CLOCK_REALTIME, &t_cur);
-  HASH_ITER(hh, edge_hash_table, edge, tmp) {
-    // too recent we come back later.
-    if (time_elapsed(edge->t_exist, t_cur).tv_sec < WAIT_TIME)
-      return;
+  if(bundle_head()==NULL)
+    return;
+  if (time_elapsed(bundle_head()->t_exist, t_cur).tv_sec < WAIT_TIME)
+    return;
+  edge = edge_pop(&bundle.list[0]);
+  while(edge!=NULL){
     get_nodes(edge, &from_node, &to_node);
     if (!from_node || !to_node) { // we cannot find one of the node
-      if(handle_missing_nodes(edge, from_node, to_node))
+      if(handle_missing_nodes(edge, from_node, to_node)){
+        edge = edge_pop(&bundle.list[0]);
         continue;
-      else
+      } else{
+        // we put it back in the list
+        insert_in_bundle(edge->msg);
+        free(edge);
         return;
+      }
     }
+    // we run the query
     runquery(from_node->msg, edge->msg, to_node->msg);
+    // we garbage collect the nodes
     if ( clean_incoming(from_node->msg, edge->msg) ) {
       delete_node(from_node);
     } else if ( clean_bothend(edge->msg) ) {
       delete_node(from_node);
       delete_node(to_node);
     }
-    delete_edge_nolock(edge);
+    free(edge->msg);
+    free(edge);
+    if (time_elapsed(bundle_head()->t_exist, t_cur).tv_sec < WAIT_TIME)
+      return;
+    edge = edge_pop(&bundle.list[0]);
   }
 }
 
@@ -178,8 +191,13 @@ int main(void){\
   }\
   while(1){\
     pthread_mutex_lock(&c_lock_edge);\
-    HASH_SORT(edge_hash_table, edge_compare);\
+    print("Bundle number %u", bundle_count_nolock());\
+    print("Bundle size %u", edge_count_nolock());\
+    print("Before merge\n");\
+    merge_bundle();\
+    print("After merge\n");\
     process();\
+    print("After process\n");\
     pthread_mutex_unlock(&c_lock_edge);\
     sleep(1);\
   }\

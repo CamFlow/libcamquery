@@ -33,12 +33,13 @@ void _init_logs( void ){
  provenance_opaque_file(LOG_FILE, true);
 }
 
-#define print(fmt, ...)\
+#define print(fmt, ...) do{\
     pthread_mutex_lock(&l_log);\
     fprintf(fp, fmt, ##__VA_ARGS__);\
     fprintf(fp, "\n");\
     fflush(fp);\
-    pthread_mutex_unlock(&l_log);
+    pthread_mutex_unlock(&l_log);\
+  }while(0);
 
 struct timespec time_elapsed(struct timespec start, struct timespec end) {
   struct timespec temp;
