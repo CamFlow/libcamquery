@@ -92,7 +92,7 @@ static inline bool clean_bothend(prov_entry_t *edge){
   return false;
 }
 
-static inline void get_nodes(struct hashable_edge *edge,
+static inline void get_nodes(struct edge *edge,
                               struct hashable_node **from_node,
                               struct hashable_node **to_node){
   *from_node = get_node(&edge->msg->relation_info.snd.node_id);
@@ -109,21 +109,21 @@ static inline bool handle_missing_nodes(struct edge *edge, struct hashable_node 
 
 static inline void process() {
   struct hashable_node *from_node, *to_node;
-  struct edge* tmp;
+  struct edge* edge;
 
   clock_gettime(CLOCK_REALTIME, &t_cur);
   if (time_elapsed(bundle_head()->t_exist, t_cur).tv_sec < WAIT_TIME)
     return;
-  tmp = edge_pop(&bundle.list[0]);
-  while(tmp!=NULL){
+  edge = edge_pop(&bundle.list[0]);
+  while(edge!=NULL){
     get_nodes(edge, &from_node, &to_node);
     if (!from_node || !to_node) { // we cannot find one of the node
       if(handle_missing_nodes(edge, from_node, to_node)){
         continue;
       } else{
         // we put it back in the list
-        insert_in_bundle(tmp->msg);
-        free(tmp);
+        insert_in_bundle(edge->msg);
+        free(edge);
         return;
       }
     }
@@ -136,11 +136,11 @@ static inline void process() {
       delete_node(from_node);
       delete_node(to_node);
     }
-    free(tmp->msg);
-    free(tmp);
+    free(edge->msg);
+    free(edge);
     if (time_elapsed(bundle_head()->t_exist, t_cur).tv_sec < WAIT_TIME)
       return;
-    tmp = edge_pop(&bundle.list[0]);
+    edge = edge_pop(&bundle.list[0]);
   }
 }
 
@@ -189,7 +189,7 @@ int main(void){\
   }\
   while(1){\
     pthread_mutex_lock(&c_lock_edge);\
-    edge_merge();\
+    merge_bundle();\
     process();\
     pthread_mutex_unlock(&c_lock_edge);\
     sleep(1);\

@@ -6,6 +6,7 @@ LIB = /usr/local/lib/provenancelib.a -lpthread -lz -lrt
 
 all:
 	$(CCC) $(INCLUDES) query.c $(LIB) -o service.o $(CCFLAGS)
+	$(CCC) $(INCLUDES) test.c $(LIB) -o test.o $(CCFLAGS)
 
 debug:
 	$(CCC) $(INCLUDES) query.c $(LIB) -o service.o $(CCFLAGS) -g
