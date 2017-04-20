@@ -18,28 +18,108 @@
 #include <pthread.h>
 #include "utils.h"
 
-struct hashable_edge {
-  prov_entry_t *msg;
-  struct timespec t_exist;
-  struct relation_identifier key;
-  UT_hash_handle hh;
+static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
+
+struct edge
+{
+    prov_entry_t *msg;
+    struct timespec t_exist;
+    struct node *next;
 };
 
-static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
-static struct hashable_edge *edge_hash_table = NULL;
+static inline bool edge_greater_than(prov_entry_t *edge1, prov_entry_t *edge2) {
+  uint32_t he1_id = edge1->relation_info.identifier.relation_id.id;
+  uint32_t he2_id = edge2->relation_info.identifier.relation_id.id;
+  uint32_t he1_boot = edge1->relation_info.identifier.relation_id.boot_id;
+  uint32_t he2_boot = edge2->relation_info.identifier.relation_id.boot_id;
+  if (he1_boot > he2_boot)
+    return true;
+  else if (he1_id > he2_id)
+    return true;
+  return false;
+}
 
-int edge_compare(struct hashable_edge* he1, struct hashable_edge* he2) {
-  uint32_t he1_id = he1->msg->relation_info.identifier.relation_id.id;
-  uint32_t he2_id = he2->msg->relation_info.identifier.relation_id.id;
-  uint32_t he1_boot = he1->msg->relation_info.identifier.relation_id.boot_id;
-  uint32_t he2_boot = he2->msg->relation_info.identifier.relation_id.boot_id;
-  if (he1_boot < he2_boot) return -1;
-  else if (he1_boot > he2_boot) return 1;
-  else {//if both edges are in the same boot, compare their ids
-    if (he1_id > he2_id) return 1;
-    else if (he1_id == he2_id) return 0;
-    else return -1;
+void append(struct edge **list, prov_entry_t* msg)
+{
+    struct edge *temp,*right;
+    struct edge *head;
+    head = *list;
+    temp= (struct edge *)malloc(sizeof(struct edge));
+    temp->msg = msg;
+    if (head == NULL)
+    {
+      *list=temp;
+      (*list)->next=NULL;
+      return;
+    }
+    right=(struct node *)head;
+    while(right->next != NULL)
+      right=right->next;
+    right->next =temp;
+    right=temp;
+    right->next=NULL;
+}
+
+
+
+void insert(struct edge **list, struct edge *edge){
+    struct edge *temp;
+    temp=*list;
+    if (temp==NULL) {
+      append(list, edge);
+    } else {
+      while(temp!=NULL)
+      {
+          if(temp->next==NULL) {
+            temp->next = edge;
+          } else {
+            if( edge_greater_than(temp->next, edge->msg) ) {
+              edge->next = temp->next;
+              temp->next = edge;
+              return;
+            }
+          }
+          temp = temp->next;
+      }
+    }
+}
+
+struct edge* pop(struct edge **list){
+  struct edge *tmp = (*list);
+  (*list) = tmp->next;
+  return tmp;
+}
+
+void merge(struct edge **main, sturct edge *small){
+  struct  edge *tmp = pop(&small);
+  while(tmp!=NULL){
+    insert(main, tmp);
   }
+}
+
+
+void  display(struct edge *r)
+{
+    if(r==NULL)
+      return;
+    while(r!=NULL)
+    {
+      printf("%d",r->msg->relation_info.identifier.relation_id.id);
+      r=r->next;
+      printf("\n");
+    }
+}
+
+
+int count(struct edge *n)
+{
+    int c=0;
+    while(n!=NULL)
+    {
+      n=n->next;
+      c++;
+    }
+    return c;
 }
 
 static inline int insert_edge(prov_entry_t *elt){
