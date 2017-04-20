@@ -44,8 +44,8 @@
 #define CAMFLOW_RAISE_WARNING -1
 
 #define WIN_SIZE 1
-#define WAIT_TIME 3
-#define STALL_TIME 2*WAIT_TIME
+#define WAIT_TIME 1
+#define STALL_TIME 1*WAIT_TIME
 
 int (*out_edge_ptr)(prov_entry_t*, prov_entry_t*)=NULL;
 int (*in_edge_ptr)(prov_entry_t*, prov_entry_t*)=NULL;
@@ -110,8 +110,9 @@ static inline bool handle_missing_nodes(struct edge *edge, struct hashable_node 
 static inline void process() {
   struct hashable_node *from_node, *to_node;
   struct edge* edge;
-
   clock_gettime(CLOCK_REALTIME, &t_cur);
+  if(bundle_head()==NULL)
+    return;
   if (time_elapsed(bundle_head()->t_exist, t_cur).tv_sec < WAIT_TIME)
     return;
   edge = edge_pop(&bundle.list[0]);
@@ -119,6 +120,7 @@ static inline void process() {
     get_nodes(edge, &from_node, &to_node);
     if (!from_node || !to_node) { // we cannot find one of the node
       if(handle_missing_nodes(edge, from_node, to_node)){
+        edge = edge_pop(&bundle.list[0]);
         continue;
       } else{
         // we put it back in the list
@@ -189,8 +191,13 @@ int main(void){\
   }\
   while(1){\
     pthread_mutex_lock(&c_lock_edge);\
+    print("Bundle number %u", bundle_count_nolock());\
+    print("Bundle size %u", edge_count_nolock());\
+    print("Before merge\n");\
     merge_bundle();\
+    print("After merge\n");\
     process();\
+    print("After process\n");\
     pthread_mutex_unlock(&c_lock_edge);\
     sleep(1);\
   }\

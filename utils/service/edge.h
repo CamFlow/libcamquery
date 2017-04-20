@@ -18,13 +18,13 @@
 #include <pthread.h>
 #include "utils.h"
 
-#define MAX_BUNDLE 100
+#define MAX_BUNDLE 500
 
 static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
 
 struct bundle {
   struct edge *list[MAX_BUNDLE];
-  prov_entry_t *last[MAX_BUNDLE];
+  prov_entry_t *  last[MAX_BUNDLE];
 } bundle;
 
 struct edge
@@ -52,7 +52,7 @@ static inline bool edge_greater_than(prov_entry_t *edge1, prov_entry_t *edge2) {
   return false;
 }
 
-void append(struct edge **list, prov_entry_t* msg)
+static inline void append(struct edge **list, prov_entry_t* msg)
 {
     struct edge *temp,*right;
     struct edge *head;
@@ -74,7 +74,7 @@ void append(struct edge **list, prov_entry_t* msg)
     right->next=NULL;
 }
 
-void  display(struct edge *r)
+static inline void  display(struct edge *r)
 {
     if(r==NULL)
       return;
@@ -85,41 +85,35 @@ void  display(struct edge *r)
     }
 }
 
-void insert(struct edge **list, struct edge *edge){
-    struct edge *temp;
-    temp=*list;
-    printf("Start: %lld\t %d\n", relation_identifier(edge->msg).boot_id, relation_identifier(edge->msg).id);
-    display(temp);
-    if (temp==NULL) {
-      printf("Temp is null\n");
-      *list=edge;
-      edge->next=NULL;
-      return;
-    } else if( edge_greater_than(temp->msg, edge->msg) ) {
-      printf("New head\n");
-      edge->next=temp;
-      (*list)=edge;
-      return;
-    } else {
-      while(temp!=NULL) {
-          printf("while %d\n", relation_identifier(temp->msg).boot_id);
-          if(temp->next==NULL) {
-            printf("There\n");
-            temp->next = edge;
-            edge->next = NULL;
-            return;
-          } else {
-            printf("Here and there\n");
-            if( edge_greater_than(temp->next->msg, edge->msg) ) {
-              printf("Here\n");
-              edge->next = temp->next;
-              temp->next = edge;
-              return;
-            }
-            temp = temp->next;
-          }
+static inline void move_node(struct edge **dest, struct edge **src){
+  struct edge *n = *src;
+  if(n==NULL)
+    return;
+  *src = n->next;
+  n->next = *dest;
+  *dest = n;
+}
+
+static inline struct edge* sorted_merge(struct edge *a, struct edge *b){
+    struct edge *result = NULL;
+    struct edge **last = &result;
+
+    while(1){
+      if(a==NULL){
+        *last=b;
+        break;
+      }else if (b==NULL){
+        *last=a;
+        break;
       }
+      if(edge_greater_than(b->msg, a->msg)){
+        move_node(last, &a);
+      }else{
+        move_node(last, &b);
+      }
+      last = &((*last)->next);
     }
+    return result;
 }
 
 struct edge* edge_pop(struct edge **list){
@@ -131,18 +125,15 @@ struct edge* edge_pop(struct edge **list){
   return tmp;
 }
 
-void edge_merge(struct edge **main, struct edge *small){
+/*void edge_merge(struct edge **main, struct edge *small){
   struct  edge *tmp = edge_pop(&small);
   while(tmp!=NULL){
-    printf("\n\n");
     insert(main, tmp);
-    printf("Next!\n");
     tmp = edge_pop(&small);
-    printf("Popped!\n");
   }
-}
+}*/
 
-int count(struct edge *n)
+static inline int count(struct edge *n)
 {
     int c=0;
     while(n!=NULL)
@@ -153,19 +144,17 @@ int count(struct edge *n)
     return c;
 }
 
-void display_bundle(){
+static inline void display_bundle(){
   int i;
   for(i=0; i<MAX_BUNDLE; i++){
     if(bundle.list[i]==NULL){
-      printf("List %d is empty\n", i);
       return;
     }
-    printf("List %d\n", i);
     display(bundle.list[i]);
   }
 }
 
-void insert_in_bundle(prov_entry_t *elt){
+static inline void insert_in_bundle(prov_entry_t *elt){
   int i;
   for(i=0; i<MAX_BUNDLE; i++){
     if(bundle.list[i]==NULL){
@@ -180,19 +169,13 @@ void insert_in_bundle(prov_entry_t *elt){
   }
 }
 
-void merge_bundle() {
+static inline void merge_bundle() {
   int i;
-  printf("======BUNDLING======\n");
-  printf("====================\n");
-  display_bundle();
   for(i=1; i<MAX_BUNDLE; i++){
     if(bundle.last[i]==NULL)
       return;
-    edge_merge(&bundle.list[0], bundle.list[i]);
+    bundle.list[0] = sorted_merge(bundle.list[0], bundle.list[i]);
     bundle.list[i]=NULL;
-    printf("======BUNDLING %d====\n", i);
-    printf("====================\n");
-    display_bundle();
   }
 }
 
@@ -209,6 +192,17 @@ static inline uint32_t edge_count_nolock(void){
     if(bundle.list[i]==NULL)
       return c;
     c+=count(bundle.list[i]);
+  }
+  return c;
+}
+
+static inline uint32_t bundle_count_nolock(void){
+  int i;
+  uint32_t c=0;
+  for(i=0; i<MAX_BUNDLE; i++){
+    if(bundle.list[i]==NULL)
+      return c;
+    c++;
   }
   return c;
 }
