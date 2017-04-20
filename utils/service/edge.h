@@ -34,6 +34,10 @@ struct edge
     struct node *next;
 };
 
+prov_entry_t* bundle_head(){
+  return bundle.list[0];
+}
+
 static inline bool edge_greater_than(prov_entry_t *edge1, prov_entry_t *edge2) {
   uint32_t he1_id = edge1->relation_info.identifier.relation_id.id;
   uint32_t he2_id = edge2->relation_info.identifier.relation_id.id;
@@ -92,13 +96,13 @@ void insert(struct edge **list, struct edge *edge){
     }
 }
 
-struct edge* pop(struct edge **list){
+struct edge* edge_pop(struct edge **list){
   struct edge *tmp = (*list);
   (*list) = tmp->next;
   return tmp;
 }
 
-void merge(struct edge **main, sturct edge *small){
+void edge_merge(struct edge **main, sturct edge *small){
   struct  edge *tmp = pop(&small);
   while(tmp!=NULL){
     insert(main, tmp);

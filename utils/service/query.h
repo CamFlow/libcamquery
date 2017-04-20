@@ -99,37 +99,48 @@ static inline void get_nodes(struct hashable_edge *edge,
   *to_node = get_node(&edge->msg->relation_info.rcv.node_id);
 }
 
-static inline bool handle_missing_nodes(struct hashable_edge *edge, struct hashable_node *from_node, struct hashable_node *to_node){
+static inline bool handle_missing_nodes(struct edge *edge, struct hashable_node *from_node, struct hashable_node *to_node){
   if (time_elapsed(edge->t_exist, t_cur).tv_sec < STALL_TIME)
     return false;
-  delete_edge_nolock(edge);
+  free(edge->msg);
+  free(edge);
   return true;
 }
 
 static inline void process() {
   struct hashable_node *from_node, *to_node;
-  struct hashable_edge *edge, *tmp;
+  struct edge* tmp;
 
   clock_gettime(CLOCK_REALTIME, &t_cur);
-  HASH_ITER(hh, edge_hash_table, edge, tmp) {
-    // too recent we come back later.
-    if (time_elapsed(edge->t_exist, t_cur).tv_sec < WAIT_TIME)
-      return;
+  if (time_elapsed(bundle_head()->t_exist, t_cur).tv_sec < WAIT_TIME)
+    return;
+  tmp = edge_pop(&bundle.list[0]);
+  while(tmp!=NULL){
     get_nodes(edge, &from_node, &to_node);
     if (!from_node || !to_node) { // we cannot find one of the node
-      if(handle_missing_nodes(edge, from_node, to_node))
+      if(handle_missing_nodes(edge, from_node, to_node)){
         continue;
-      else
+      } else{
+        // we put it back in the list
+        insert_in_bundle(tmp->msg);
+        free(tmp);
         return;
+      }
     }
+    // we run the query
     runquery(from_node->msg, edge->msg, to_node->msg);
+    // we garbage collect the nodes
     if ( clean_incoming(from_node->msg, edge->msg) ) {
       delete_node(from_node);
     } else if ( clean_bothend(edge->msg) ) {
       delete_node(from_node);
       delete_node(to_node);
     }
-    delete_edge_nolock(edge);
+    free(tmp->msg);
+    free(tmp);
+    if (time_elapsed(bundle_head()->t_exist, t_cur).tv_sec < WAIT_TIME)
+      return;
+    tmp = edge_pop(&bundle.list[0]);
   }
 }
 
@@ -178,7 +189,7 @@ int main(void){\
   }\
   while(1){\
     pthread_mutex_lock(&c_lock_edge);\
-    HASH_SORT(edge_hash_table, edge_compare);\
+    edge_merge();\
     process();\
     pthread_mutex_unlock(&c_lock_edge);\
     sleep(1);\
