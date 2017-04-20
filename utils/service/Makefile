@@ -60,5 +60,18 @@ run_build:
 	cd ../../../camflow-install/build/camflow-patches/v0.3.0/build/linux-4.10.10 && make -j4
 	sudo camflow -a false
 
+check_postmark:
+	strace -c -o postmark_syscall_analysis.txt -p $(shell pidof postmark)
+	#cd build/postmark && time ./postmark
+	
+
+check_build:
+	strace -c -o build_syscall_analysis.txt phoronix-test-suite benchmark pts/build-linux-kernel-1.7.0
+	#time phoronix-test-suite benchmark pts/build-linux-kernel-1.7.0
+
+check_unpack:
+	strace -c -o unpack_syscall_analysis.txt phoronix-test-suite benchmark pts/unpack-linux-1.0.0
+	#time phoronix-test-suite benchmark pts/unpack-linux-1.0.0
+
 clean:
 	rm -f service.o
