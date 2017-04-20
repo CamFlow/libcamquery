@@ -24,7 +24,7 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
 }
 
 static int in_edge(prov_entry_t* edge, prov_entry_t* node){
-  //print("Query: --%llx-->(%llx)", prov_type(edge), prov_type(node));
+  //print("Query: --%lld", relation_identifier(edge).id);
   if( has_label(edge, secret) ){
     if( node_type(node) == ENT_INODE_SOCKET )
       return CAMFLOW_RAISE_WARNING;
