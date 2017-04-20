@@ -52,6 +52,7 @@ void append(struct edge **list, prov_entry_t* msg)
     struct edge *head;
     head = *list;
     temp= (struct edge *)malloc(sizeof(struct edge));
+    clock_gettime(CLOCK_REALTIME, &(edge->t_exist));
     temp->msg = msg;
     if (head == NULL)
     {
@@ -148,27 +149,25 @@ void merge_bundle() {
     if(bundle.last[i]==NULL)
       return;
     merge(&bundle.list[0], bundle.list[i]);
+    bundle.list[i]=NULL;
   }
 }
 
 static inline int insert_edge(prov_entry_t *elt){
-  struct hashable_edge *edge = (struct hashable_edge*) malloc(sizeof(struct hashable_edge));
-  memset(edge, 0, sizeof(struct hashable_edge));
-  edge->msg = elt;
-  clock_gettime(CLOCK_REALTIME, &(edge->t_exist));
   memcpy(&edge->key, &(elt->relation_info.identifier.relation_id), sizeof(struct relation_identifier));
   pthread_mutex_lock(&c_lock_edge);
-  HASH_ADD(hh, edge_hash_table, key, sizeof(struct relation_identifier), edge);
+  insert_in_bundle(elt);
   pthread_mutex_unlock(&c_lock_edge);
 }
 
-static inline void delete_edge_nolock(struct hashable_edge *edge){
-  HASH_DEL(edge_hash_table, edge);
-  free(edge->msg);
-  free(edge);
-}
-
 static inline uint32_t edge_count_nolock(void){
-  return HASH_COUNT(edge_hash_table);
+  int i;
+  uint32_t c=0;
+  for(i=0; i<MAX_BUNDLE; i++){
+    if(bundle.list[i]==NULL)
+      return c;
+    c+=count(bundle.list[i]);
+  }
+  return c;
 }
 #endif
