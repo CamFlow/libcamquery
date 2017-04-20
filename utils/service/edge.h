@@ -18,13 +18,13 @@
 #include <pthread.h>
 #include "utils.h"
 
-#define MAX_BUNDLE 500
+#define MAX_BUNDLE 50
 
 static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
 
 struct bundle {
   struct edge *list[MAX_BUNDLE];
-  prov_entry_t *  last[MAX_BUNDLE];
+  struct edge *last[MAX_BUNDLE];
 } bundle;
 
 struct edge
@@ -52,7 +52,7 @@ static inline bool edge_greater_than(prov_entry_t *edge1, prov_entry_t *edge2) {
   return false;
 }
 
-static inline void append(struct edge **list, prov_entry_t* msg)
+static inline void append(struct edge **list,  struct edge **last, prov_entry_t* msg)
 {
     struct edge *temp,*right;
     struct edge *head;
@@ -64,14 +64,12 @@ static inline void append(struct edge **list, prov_entry_t* msg)
     {
       *list=temp;
       (*list)->next=NULL;
+      *last=temp;
       return;
     }
-    right=head;
-    while(right->next != NULL)
-      right=right->next;
-    right->next =temp;
-    right=temp;
-    right->next=NULL;
+    (*last)->next = temp;
+    temp->next = NULL;
+    (*last) = temp;
 }
 
 static inline void  display(struct edge *r)
@@ -158,12 +156,10 @@ static inline void insert_in_bundle(prov_entry_t *elt){
   int i;
   for(i=0; i<MAX_BUNDLE; i++){
     if(bundle.list[i]==NULL){
-      append(&bundle.list[i], elt);
-      bundle.last[i]=elt;
+      append(&bundle.list[i], &bundle.last[i], elt);
       return;
-    }else if(edge_greater_than(elt, bundle.last[i])){
-      append(&bundle.list[i], elt);
-      bundle.last[i]=elt;
+    }else if(edge_greater_than(elt, bundle.last[i]->msg)){
+      append(&bundle.list[i], &bundle.last[i], elt);
       return;
     }
   }
@@ -175,7 +171,7 @@ static inline void merge_bundle() {
     if(bundle.last[i]==NULL)
       return;
     bundle.list[0] = sorted_merge(bundle.list[0], bundle.list[i]);
-    bundle.list[i]=NULL;
+    bundle.list[i]= NULL;
   }
 }
 
