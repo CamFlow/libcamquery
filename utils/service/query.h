@@ -191,13 +191,8 @@ int main(void){\
   }\
   while(1){\
     pthread_mutex_lock(&c_lock_edge);\
-    print("Bundle number %u", bundle_count_nolock());\
-    print("Bundle size %u", edge_count_nolock());\
-    print("Before merge\n");\
     merge_bundle();\
-    print("After merge\n");\
     process();\
-    print("After process\n");\
     pthread_mutex_unlock(&c_lock_edge);\
     sleep(1);\
   }\
