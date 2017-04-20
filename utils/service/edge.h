@@ -18,7 +18,14 @@
 #include <pthread.h>
 #include "utils.h"
 
+#define MAX_BUNDLE 100
+
 static pthread_mutex_t c_lock_edge = PTHREAD_MUTEX_INITIALIZER;
+
+struct bundle {
+  struct edge *list[MAX_BUNDLE];
+  prov_entry_t *last[MAX_BUNDLE];
+} bundle;
 
 struct edge
 {
@@ -97,7 +104,6 @@ void merge(struct edge **main, sturct edge *small){
   }
 }
 
-
 void  display(struct edge *r)
 {
     if(r==NULL)
@@ -110,7 +116,6 @@ void  display(struct edge *r)
     }
 }
 
-
 int count(struct edge *n)
 {
     int c=0;
@@ -120,6 +125,30 @@ int count(struct edge *n)
       c++;
     }
     return c;
+}
+
+void insert_in_bundle(prov_entry_t *elt){
+  int i;
+  for(i=0; i<MAX_BUNDLE; i++){
+    if(bundle.list[i]==NULL){
+      append(bundle.list[i], elt);
+      bundle.last[i]=elt;
+      return;
+    }else if(edge_greater_than(elt, bundle.last[i])){
+      append(bundle.list[i], elt);
+      bundle.last[i]=elt;
+      return;
+    }
+  }
+}
+
+void merge_bundle() {
+  int i;
+  for(i=1; i<MAX_BUNDLE; i++){
+    if(bundle.last[i]==NULL)
+      return;
+    merge(&bundle.list[0], bundle.list[i]);
+  }
 }
 
 static inline int insert_edge(prov_entry_t *elt){
