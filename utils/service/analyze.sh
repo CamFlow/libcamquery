@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 while read -r cpuid cpu
 do

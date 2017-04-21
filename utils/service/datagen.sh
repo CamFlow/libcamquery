@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 awk 'NR % 3 == 0' $1 > "ps.txt"
 awk 'NR % 3 == 2' $1 > "top.txt"
 while read -r cpu mem
