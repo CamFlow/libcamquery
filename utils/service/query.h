@@ -115,12 +115,12 @@ static inline void process() {
     return;
   if (time_elapsed(bundle_head()->t_exist, t_cur).tv_sec < WAIT_TIME)
     return;
-  edge = edge_pop(&bundle.list[0]);
+  edge = edge_pop(&bundle.list[0], &bundle.last[0]);
   while(edge!=NULL){
     get_nodes(edge, &from_node, &to_node);
     if (!from_node || !to_node) { // we cannot find one of the node
       if(handle_missing_nodes(edge, from_node, to_node)){
-        edge = edge_pop(&bundle.list[0]);
+        edge = edge_pop(&bundle.list[0], &bundle.last[0]);
         continue;
       } else{
         // we put it back in the list
@@ -140,9 +140,11 @@ static inline void process() {
     }
     free(edge->msg);
     free(edge);
+    if(bundle_head()==NULL)
+      return;
     if (time_elapsed(bundle_head()->t_exist, t_cur).tv_sec < WAIT_TIME)
       return;
-    edge = edge_pop(&bundle.list[0]);
+    edge = edge_pop(&bundle.list[0], &bundle.last[0]);
   }
 }
 

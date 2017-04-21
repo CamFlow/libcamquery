@@ -114,11 +114,13 @@ static inline struct edge* sorted_merge(struct edge *a, struct edge *b){
     return result;
 }
 
-struct edge* edge_pop(struct edge **list){
+struct edge* edge_pop(struct edge **list, struct edge **last){
   struct edge *tmp = (*list);
   if(tmp==NULL)
     return NULL;
   (*list) = tmp->next;
+  if(*list==NULL)
+    *last = NULL;
   tmp->next=NULL;
   return tmp;
 }

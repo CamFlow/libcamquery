@@ -26,4 +26,12 @@ int main(void){
   merge_bundle();
   printf("After merge\n");
   display_bundle();
+  for(i=0; i<1000; i++)
+    edge_pop(&bundle.list[0], &bundle.last[0]);
+  display_bundle();
+  printf("After first pop\n");
+  for(i=0; i<1000; i++)
+    edge_pop(&bundle.list[0], &bundle.last[0]);
+  display_bundle();
+  printf("After second pop\n");
 }
