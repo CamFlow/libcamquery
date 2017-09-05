@@ -30,8 +30,9 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <time.h>
+#include <linux/provenance_types.h>
 
-#include "provenancelib.h"
+#include "provenance.h"
 #include "provenanceutils.h"
 #include "provenancePovJSON.h"
 #include "uthash.h"

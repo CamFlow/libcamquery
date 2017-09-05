@@ -1,9 +1,0 @@
-1. If the edge is
-	RL_NAMED_PROCESS
-   & the destination node is
-	ENT_FILE_NAME
-   Remove destination node
-
-2. If snd node of an edge is
-	ENT_PACKET or ENT_ADDR or ENT_XATTR
-   Remove the node once the edge is processed

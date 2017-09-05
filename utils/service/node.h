@@ -73,7 +73,7 @@ static inline void node_print_content(void){
   struct hashable_node *node, *tmp;
   pthread_mutex_lock(&c_lock_node);
   HASH_ITER(hh, node_hash_table, node, tmp) {
-    print("Uncleared Node Type: %s", node_str(prov_type(node->msg)));
+    print("Uncleared Node Type: %s", node_id_to_str(prov_type(node->msg)));
   }
   pthread_mutex_unlock(&c_lock_node);
 }

@@ -1,7 +1,7 @@
 INCLUDES = -I../build/SimpleLogger -I../build/inih -I../../build/uthash/src
 CCFLAGS = -g -O2 -fpic
 CCC = gcc
-LIB = /usr/local/lib/provenancelib.a -lpthread -lz -lrt
+LIB = -lprovenance -lpthread -lz -lrt
 .SUFFIXES: .c
 
 all:
@@ -64,7 +64,7 @@ run_build:
 check_postmark:
 	strace -c -o postmark_syscall_analysis.txt -p $(shell pidof postmark)
 	#cd build/postmark && time ./postmark
-	
+
 
 check_build:
 	strace -c -o build_syscall_analysis.txt phoronix-test-suite benchmark pts/build-linux-kernel-1.7.0
