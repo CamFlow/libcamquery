@@ -1,5 +1,5 @@
 #define KERNEL_QUERY
-#include "include/camflow_query.h"
+#include "include/provenance_query.h"
 
 static label_t secret;
 
@@ -27,7 +27,7 @@ static int in_edge(prov_entry_t* edge, prov_entry_t* node){
   //print("Query: --%llx-->(%llx)", prov_type(edge), prov_type(node));
   if( has_label(edge, secret) ){
     if( node_type(node) == ENT_INODE_SOCKET )
-      return CAMFLOW_RAISE_WARNING;
+      return PROVENANCE_RAISE_WARNING;
     else
       add_label(node, secret);
   }

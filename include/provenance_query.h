@@ -16,7 +16,8 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/camflow_query.h>
+#include <linux/provenance_query.h>
+#include <linux/provenance_types.h>
 
 typedef uint64_t label_t;
 
@@ -28,12 +29,12 @@ struct provenance_query_hooks hooks = {\
 static int __init query_init(void){\
    printk(KERN_INFO "Provenance: loading new query... (%s)\n", name);\
    init_fcn();\
-   register_camflow_query_hook(&hooks);\
+   register_provenance_query_hooks(&hooks);\
    return 0;\
 }\
 static void __exit query_exit(void){\
    printk(KERN_INFO "Provenance: removing query... (%s)\n", name);\
-   unregister_camflow_query_hook(&hooks);\
+   unregister_provenance_query_hooks(&hooks);\
 }\
 module_init(query_init);\
 module_exit(query_exit);\
