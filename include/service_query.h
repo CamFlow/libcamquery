@@ -1,7 +1,6 @@
 /*
  *
  * Author: Thomas Pasquier <tfjmp@g.harvard.edu>
- * Author: Xueyuan Michael Han <hanx@g.harvard.edu>
  *
  * Copyright (C) 2017 Harvard University
  *
@@ -11,8 +10,8 @@
  *	(at your option) any later version.
  *
  */
-#ifndef ___LIB_QUERY_QUERY_H
-#define ___LIB_QUERY_QUERY_H
+#ifndef ___LIB_SERVICE_QUERY_H
+#define ___LIB_SERVICE_QUERY_H
 
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -34,7 +33,7 @@
 
 #include "provenance.h"
 #include "provenanceutils.h"
-#include "provenancePovJSON.h"
+#include "provenanceProvJSON.h"
 #include "uthash.h"
 #include "node.h"
 #include "edge.h"
@@ -42,7 +41,7 @@
 
 #define gettid() syscall(SYS_gettid)
 
-#define CAMFLOW_RAISE_WARNING -1
+#define PROVENANCE_RAISE_WARNING -1
 
 #define WIN_SIZE 1
 #define WAIT_TIME 1
@@ -179,6 +178,12 @@ struct provenance_ops ops = {
   .log_error=&log_error
 };
 
+#define QUERY_DESCRIPTION(desc_str) const char desc[] = desc_str
+#define QUERY_LICSENSE(license_str) const char license[] = license_str
+#define QUERY_AUTHOR(author_str) const char author[] = author_str
+#define QUERY_VERSION(version_str) const char version[] = version_str
+#define QUERY_CHANNEL(channel_str) const char channel[] = channel_str
+
 #define register_query(init_fcn, in_fcn, out_fcn)\
 int main(void){\
   int rc;\
@@ -187,7 +192,7 @@ int main(void){\
   out_edge_ptr=out_fcn;\
   init_fcn();\
   print("Runtime query service pid: %ld\n", getpid());\
-  rc = provenance_register(&ops);\
+  rc = provenance_relay_register(&ops, channel);\
   if(rc<0){\
     print("Failed registering audit operation (%d).\n", rc);\
     exit(rc);\
@@ -214,5 +219,4 @@ static inline bool has_label(prov_entry_t* elmt, label_t label){
 static inline void add_label(prov_entry_t* elmt, label_t label){
   prov_bloom_add(prov_taint(elmt), label);
 }
-
- #endif
+#endif

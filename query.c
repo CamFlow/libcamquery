@@ -9,28 +9,12 @@ static void init( void ){
 }
 
 static int out_edge(prov_entry_t* node, prov_entry_t* edge){
-  //print("Query: (%llx)--%llx-->", prov_type(node), prov_type(edge));
-  if( edge_type(edge)== RL_WRITE              ||
-      edge_type(edge)== RL_READ               ||
-      edge_type(edge)== RL_RCV                ||
-      edge_type(edge)== RL_SND                ||
-      edge_type(edge)== RL_VERSION            ||
-      edge_type(edge)== RL_VERSION_PROCESS    ||
-      edge_type(edge)== RL_CLONE){
-    if( has_label(node, secret) )
-      add_label(edge, secret);
-  }
+  print("Query: (%llx)--%llx-->", prov_type(node), prov_type(edge));
   return 0;
 }
 
 static int in_edge(prov_entry_t* edge, prov_entry_t* node){
-  //print("Query: --%llx-->(%llx)", prov_type(edge), prov_type(node));
-  if( has_label(edge, secret) ){
-    if( node_type(node) == ENT_INODE_SOCKET )
-      return PROVENANCE_RAISE_WARNING;
-    else
-      add_label(node, secret);
-  }
+  print("Query: --%llx-->(%llx)", prov_type(edge), prov_type(node));
   return 0;
 }
 
@@ -39,4 +23,10 @@ QUERY_LICSENSE("GPL");
 QUERY_AUTHOR("Thomas Pasquier");
 QUERY_VERSION("0.1");
 QUERY_NAME("My Example Query");
+
+// service specific build settings
+#ifdef SERVICE_QUERY
+QUERY_CHANNEL("example");
+#endif
+
 register_query(init, in_edge, out_edge);
