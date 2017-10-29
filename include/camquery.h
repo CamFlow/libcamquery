@@ -10,6 +10,9 @@
  *	(at your option) any later version.
  *
  */
+#ifndef ___LIB_CAMQUERY_H
+#define ___LIB_CAMQUERY_H
+
 
 #ifdef KERNEL_QUERY
 
@@ -64,4 +67,5 @@ static inline void add_label(prov_entry_t* elmt, label_t label){
 
 #else
 #error Define a valid target.
+#endif
 #endif

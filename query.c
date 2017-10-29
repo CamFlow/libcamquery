@@ -1,5 +1,5 @@
 #define KERNEL_QUERY
-#include "include/provenance_query.h"
+#include "include/camquery.h"
 
 static label_t secret;
 

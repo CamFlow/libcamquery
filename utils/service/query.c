@@ -1,5 +1,5 @@
 #define KERNEL_QUERY
-  #include "query.h"
+#include "query.h"
 
 static label_t secret;
 
