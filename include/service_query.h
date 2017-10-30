@@ -1,6 +1,7 @@
 /*
  *
  * Author: Thomas Pasquier <tfjmp@g.harvard.edu>
+ * Author: Xueyuan Han <hanx@g.harvard.edu>
  *
  * Copyright (C) 2017 Harvard University
  *
