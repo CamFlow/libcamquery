@@ -78,7 +78,7 @@ static inline void  display(struct edge *r)
       return;
     while(r!=NULL)
     {
-      printf("Entry: %d \t %lld\n", relation_identifier(r->msg).boot_id, relation_identifier(r->msg).id);
+      printf("Entry: %d \t %ld\n", relation_identifier(r->msg).boot_id, relation_identifier(r->msg).id);
       r=r->next;
     }
 }

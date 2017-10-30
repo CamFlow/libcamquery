@@ -16,13 +16,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define	LOG_FILE "/tmp/audit.log"
 static FILE *fp=NULL;
 static pthread_mutex_t l_log =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
-void _init_logs( void ){
+void _init_logs( const char *file){
  int n;
- fp = fopen(LOG_FILE, "a+");
+ fp = fopen(file, "a+");
  if(!fp){
    printf("Cannot open file\n");
    exit(-1);
@@ -30,7 +29,7 @@ void _init_logs( void ){
  n = fprintf(fp, "Starting audit service...\n");
  printf("%d\n", n);
 
- provenance_opaque_file(LOG_FILE, true);
+ provenance_opaque_file(file, true);
 }
 
 #define print(fmt, ...) do{\

@@ -70,7 +70,7 @@ static struct timespec t_cur;
 // per thread init
 static void ___init( void ){
   pid_t tid = gettid();
-  print("audit writer thread, tid:%ld\n", tid);
+  print("audit writer thread, tid:%d\n", tid);
 }
 
 static inline bool clean_incoming(prov_entry_t *from,
@@ -168,7 +168,7 @@ static void received_long_prov(union long_prov_elt* msg){
 }
 
 static void log_error(char* err_msg){
-  print(err_msg);
+  print("%s", err_msg);
 }
 
 struct provenance_ops ops = {
@@ -183,15 +183,16 @@ struct provenance_ops ops = {
 #define QUERY_AUTHOR(author_str) const char author[] = author_str
 #define QUERY_VERSION(version_str) const char version[] = version_str
 #define QUERY_CHANNEL(channel_str) const char channel[] = channel_str
+#define QUERY_OUTPUT(output_str) const char output[] = output_str
 
 #define register_query(init_fcn, in_fcn, out_fcn)\
 int main(void){\
   int rc;\
-  _init_logs();\
+  _init_logs(output);\
   in_edge_ptr=in_fcn;\
   out_edge_ptr=out_fcn;\
   init_fcn();\
-  print("Runtime query service pid: %ld\n", getpid());\
+  print("Runtime query service pid: %d\n", getpid());\
   rc = provenance_relay_register(&ops, channel);\
   if(rc<0){\
     print("Failed registering audit operation (%d).\n", rc);\
@@ -204,7 +205,7 @@ int main(void){\
     pthread_mutex_unlock(&c_lock_edge);\
     sleep(1);\
   }\
-  provenance_stop();\
+  provenance_relay_stop();\
   return 0;\
 }
 
