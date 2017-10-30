@@ -41,6 +41,9 @@
 
 #define gettid() syscall(SYS_gettid)
 
+#define relation_str(id) relation_id_to_str(id)
+#define node_str(id) node_id_to_str(id)
+
 #define PROVENANCE_RAISE_WARNING -1
 
 #define WIN_SIZE 1

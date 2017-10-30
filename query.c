@@ -9,12 +9,14 @@ static void init( void ){
 }
 
 static int out_edge(prov_entry_t* node, prov_entry_t* edge){
-  print("Query: (%lx)--%lx-->", prov_type(node), prov_type(edge));
+  print("Out:\t(%s)", node_str(prov_type(node)) );
+  print("Out:\t-%s->", relation_str(prov_type(edge)) );
   return 0;
 }
 
 static int in_edge(prov_entry_t* edge, prov_entry_t* node){
-  print("Query: --%lx-->(%lx)", prov_type(edge), prov_type(node));
+  print("In:\t-%s->", relation_str(prov_type(edge)) );
+  print("In:\t(%s)", node_str(prov_type(node)) );
   return 0;
 }
 
