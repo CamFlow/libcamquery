@@ -29,11 +29,12 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <time.h>
-#include <linux/provenance_types.h>
 
-#include "provenance.h"
-#include "provenanceutils.h"
-#include "provenanceProvJSON.h"
+#include <linux/provenance_types.h>
+#include <provenance.h>
+#include <provenanceutils.h>
+#include <provenanceProvJSON.h>
+
 #include "uthash.h"
 #include "node.h"
 #include "edge.h"
