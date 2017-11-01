@@ -1,6 +1,8 @@
 #define SERVICE_QUERY
 #include <camquery.h>
 
+#define MAX_SUPPORTED_PARENT 20
+
 FILE *logfile;
 
 static void init( void ){
@@ -10,8 +12,8 @@ static void init( void ){
 
 struct propagate {
   uint32_t in;
-  uint64_t in_type[10];
-  int64_t offset[10];
+  uint64_t in_type[MAX_SUPPORTED_PARENT];
+  int64_t offset[MAX_SUPPORTED_PARENT];
   uint64_t utime;
 	uint64_t stime;
   uint64_t vm;
@@ -38,13 +40,13 @@ static void print_node(prov_entry_t* node){
   fprintf(logfile, "cf:%s,", id);
   fprintf(logfile, "%s,", node_id_to_str(node_type(node)));
   fprintf(logfile, "%u,", np->in);
-  for(i=0; i<10; i++){
+  for(i=0; i<MAX_SUPPORTED_PARENT; i++){
     if(np->in_type[i]!=0)
       fprintf(logfile, "%s,", relation_id_to_str(np->in_type[i]));
     else
       fprintf(logfile, "NULL,");
   }
-  for(i=0; i<10; i++){
+  for(i=0; i<MAX_SUPPORTED_PARENT; i++){
     fprintf(logfile, "%ld,", np->offset[i]);
   }
   fprintf(logfile, "%lu,", np->utime);
@@ -105,7 +107,7 @@ static int in_edge(prov_entry_t* edge, prov_entry_t* node){
   np = node->msg_info.var_ptr;
 
   /* couting in edges */
-  if (np->in < 10) {
+  if (np->in < MAX_SUPPORTED_PARENT) {
     np->in_type[np->in] = edge_type(edge);
     np->offset[np->in] = edge->relation_info.offset;
   }
