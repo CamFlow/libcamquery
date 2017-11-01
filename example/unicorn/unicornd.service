@@ -1,0 +1,12 @@
+[Unit]
+Description=Unicorn service
+Requires=camconfd.service
+After=camconfd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/unicornd
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

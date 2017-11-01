@@ -20,16 +20,16 @@ static int in_edge(prov_entry_t* edge, prov_entry_t* node){
   return 0;
 }
 
-QUERY_DESCRIPTION("An example query");
+QUERY_DESCRIPTION("Compute feature vectors for unicorn!");
 QUERY_LICSENSE("GPL");
-QUERY_AUTHOR("Thomas Pasquier");
+QUERY_AUTHOR("Thomas Pasquier and Michael Han");
 QUERY_VERSION("0.1");
-QUERY_NAME("My Example Query");
+QUERY_NAME("Unicorn");
 
 // service specific build settings
 #ifdef SERVICE_QUERY
-QUERY_CHANNEL("example");
-QUERY_OUTPUT("/tmp/example.log");
+QUERY_CHANNEL("unicorn");
+QUERY_OUTPUT("/tmp/unicorn.log");
 #endif
 
 register_query(init, in_edge, out_edge);

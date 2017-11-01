@@ -180,7 +180,8 @@ struct provenance_ops ops = {
   .init=&___init,
   .received_prov=&received_prov,
   .received_long_prov=&received_long_prov,
-  .log_error=&log_error
+  .log_error=&log_error,
+  .is_query=true
 };
 
 #define QUERY_DESCRIPTION(desc_str) const char desc[] = desc_str
@@ -198,6 +199,7 @@ int main(void){\
   out_edge_ptr=out_fcn;\
   init_fcn();\
   print("Runtime query service pid: %d\n", getpid());\
+  ops.is_query=true;\
   rc = provenance_relay_register(&ops, channel);\
   if(rc<0){\
     print("Failed registering audit operation (%d).\n", rc);\
