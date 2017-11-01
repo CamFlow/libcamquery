@@ -49,6 +49,7 @@ static inline void delete_node(struct hashable_node *node){
   node->msg->node_info.identifier.node_id.id, node->msg->node_info.identifier.node_id.boot_id,
   node->msg->node_info.identifier.node_id.version);
 #endif
+  free(node->msg->msg_info.var_ptr);
   free(node->msg);
   free(node);
 }
