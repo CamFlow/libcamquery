@@ -1,13 +1,17 @@
 #define SERVICE_QUERY
 #include <camquery.h>
 
+FILE *logfile;
+
 static void init( void ){
-  print("id,type,in,in_type1,in_type2,in_type3,in_type4,in_type5,in_type6,in_type7,in_type8,in_type9,in_type10,utime,stime,vm,rss,hw_vm,hw_rss,rbytes,wbytes,cancel_wbytes");
+  print("id,type,in,in_type1,in_type2,in_type3,in_type4,in_type5,in_type6,in_type7,in_type8,in_type9,in_type10,utime,stime,vm,rss,hw_vm,hw_rss,rbytes,wbytes,cancel_wbytes,utsns,ipcns,mntns,pidns,netns,cgroupns");
+  logfile = fopen("/tmp/unicorn", "a");
 }
 
 struct propagate {
   uint32_t in;
   uint64_t in_type[10];
+  int64_t offset[10];
   uint64_t utime;
 	uint64_t stime;
   uint64_t vm;
@@ -17,35 +21,44 @@ struct propagate {
   uint64_t rbytes;
 	uint64_t wbytes;
 	uint64_t cancel_wbytes;
+  bool recorded;
 };
 
 static void print_node(prov_entry_t* node){
   char id[PROV_ID_STR_LEN];
+  int i;
   struct propagate *np = node->msg_info.var_ptr;
+
+  // already saved it
+  if(np->recorded)
+    return;
+
   ID_ENCODE(get_prov_identifier(node).buffer, PROV_IDENTIFIER_BUFFER_LENGTH, id, PROV_ID_STR_LEN);
-  print("cf:%s,%s,%d,%lx,%lx,%lx,%lx,%lx,%lx,%lx,%lx,%lx,%lx,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu",
-    id,
-    node_id_to_str(node_type(node)),
-    np->in,
-    np->in_type[0],
-    np->in_type[1],
-    np->in_type[2],
-    np->in_type[3],
-    np->in_type[4],
-    np->in_type[5],
-    np->in_type[6],
-    np->in_type[7],
-    np->in_type[8],
-    np->in_type[9],
-    np->utime,
-    np->stime,
-    np->vm,
-    np->rss,
-    np->hw_vm,
-    np->hw_rss,
-    np->rbytes,
-    np->wbytes,
-    np->cancel_wbytes);
+
+  fprintf(logfile, "cf:%s,", id);
+  fprintf(logfile, "%s,", node_id_to_str(node_type(node)));
+  fprintf(logfile, "%u,", np->in);
+  for(i=0; i<10; i++){
+    if(np->in_type[i]!=0)
+      fprintf(logfile, "%s,", relation_id_to_str(np->in_type[i]));
+    else
+      fprintf(logfile, "NULL,");
+  }
+  for(i=0; i<10; i++){
+    fprintf(logfile, "%ld,", np->offset[i]);
+  }
+  fprintf(logfile, "%lu,", np->utime);
+  fprintf(logfile, "%lu,", np->stime);
+  fprintf(logfile, "%lu,", np->vm);
+  fprintf(logfile, "%lu,", np->rss);
+  fprintf(logfile, "%lu,", np->hw_vm);
+  fprintf(logfile, "%lu,", np->hw_rss);
+  fprintf(logfile, "%lu,", np->rbytes);
+  fprintf(logfile, "%lu,", np->wbytes);
+  fprintf(logfile, "%lu,", np->cancel_wbytes);
+  fprintf(logfile, "\n");
+  fflush(logfile);
+  np->recorded=true;
 }
 
 void* zalloc(size_t size){
@@ -92,8 +105,10 @@ static int in_edge(prov_entry_t* edge, prov_entry_t* node){
   np = node->msg_info.var_ptr;
 
   /* couting in edges */
-  if (np->in < 10)
+  if (np->in < 10) {
     np->in_type[np->in] = edge_type(edge);
+    np->offset[np->in] = edge->relation_info.offset;
+  }
   np->in++;
 
   if (edge_type(edge) == RL_VERSION_PROCESS) {
