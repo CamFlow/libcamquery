@@ -6,7 +6,6 @@
 FILE *logfile;
 
 static void init( void ){
-  print("id,type,in,in_type1,in_type2,in_type3,in_type4,in_type5,in_type6,in_type7,in_type8,in_type9,in_type10,utime,stime,vm,rss,hw_vm,hw_rss,rbytes,wbytes,cancel_wbytes,utsns,ipcns,mntns,pidns,netns,cgroupns");
   logfile = fopen("/tmp/unicorn", "a");
 }
 
@@ -58,6 +57,21 @@ static void print_node(prov_entry_t* node){
   fprintf(logfile, "%lu,", np->rbytes);
   fprintf(logfile, "%lu,", np->wbytes);
   fprintf(logfile, "%lu,", np->cancel_wbytes);
+  if (node_type(node) == ACT_TASK) {
+    fprintf(logfile, "%u,", node->task_info.utsns);
+    fprintf(logfile, "%u,", node->task_info.ipcns);
+    fprintf(logfile, "%u,", node->task_info.mntns);
+    fprintf(logfile, "%u,", node->task_info.pidns);
+    fprintf(logfile, "%u,", node->task_info.netns);
+    fprintf(logfile, "%u,", node->task_info.cgroupns);
+  } else {
+    fprintf(logfile, "-1,");
+    fprintf(logfile, "-1,");
+    fprintf(logfile, "-1,");
+    fprintf(logfile, "-1,");
+    fprintf(logfile, "-1,");
+    fprintf(logfile, "-1,");
+  }
   fprintf(logfile, "\n");
   fflush(logfile);
   np->recorded=true;
