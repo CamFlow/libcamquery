@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include "utils.h"
+#include <camquery_utils.h>
 
 #define MAX_BUNDLE 50
 

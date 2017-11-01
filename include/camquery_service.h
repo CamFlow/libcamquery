@@ -36,10 +36,10 @@
 #include <provenanceutils.h>
 #include <provenanceProvJSON.h>
 
-#include "uthash.h"
-#include "node.h"
-#include "edge.h"
-#include "utils.h"
+#include <uthash.h>
+#include <camquery_node.h>
+#include <camquery_edge.h>
+#include <camquery_utils.h>
 
 #define gettid() syscall(SYS_gettid)
 

@@ -24,3 +24,13 @@ load:
 
 unload:
 	sudo rmmod query
+
+install_uthash:
+	cd ./build/uthash/include && sudo cp --force ./utarray.h /usr/include/utarray.h
+	cd ./build/uthash/include && sudo cp --force ./uthash.h /usr/include/uthash.h
+	cd ./build/uthash/include && sudo cp --force ./utlist.h /usr/include/utlist.h
+	cd ./build/uthash/include && sudo cp --force ./utringbuffer.h /usr/include/utringbuffer.h
+	cd ./build/uthash/include && sudo cp --force ./utstring.h /usr/include/utstring.h
+
+install: install_uthash
+	cd ./include && sudo $(MAKE) install

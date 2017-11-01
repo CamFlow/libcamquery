@@ -18,8 +18,8 @@
 #define QUERY_NAME(name_str) const char name[] = name_str
 
 #ifdef KERNEL_QUERY
-#include "kernel_query.h"
+#include <camquery_kernel.h>
 #else
-#include "service_query.h"
+#include <camquery_service.h>
 #endif
 #endif
