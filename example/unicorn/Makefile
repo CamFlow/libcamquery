@@ -13,5 +13,8 @@ install:
 	sudo cp --force ./unicornd.service /etc/systemd/system/unicornd.service
 	sudo systemctl enable unicornd.service
 
+restart:
+	sudo systemctl restart unicornd.service
+
 clean:
 	rm *.o
