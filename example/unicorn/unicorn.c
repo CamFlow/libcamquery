@@ -1,80 +1,36 @@
+/*
+ *
+ * Author: Thomas Pasquier <tfjmp@g.harvard.edu>
+ * Author: Xueyuan Han <hanx@g.harvard.edu>
+ *
+ * Copyright (C) 2017 Harvard University
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation; either version 2 of the License, or
+ *	(at your option) any later version.
+ *
+ */
 #define SERVICE_QUERY
 #include <camquery.h>
 
-#define MAX_SUPPORTED_PARENT 20
+#include "vector.h"
+
+#define MAX_SUPPORTED_PARENT 2
 
 FILE *logfile;
 
 static void init( void ){
-  logfile = fopen("/tmp/unicorn", "a");
+  print("unicornd ready!")
 }
 
-struct propagate {
-  uint32_t in;
-  uint64_t in_type[MAX_SUPPORTED_PARENT];
-  int64_t offset[MAX_SUPPORTED_PARENT];
-  uint64_t utime;
-	uint64_t stime;
-  uint64_t vm;
-  uint64_t rss;
-  uint64_t hw_vm;
-  uint64_t hw_rss;
-  uint64_t rbytes;
-	uint64_t wbytes;
-	uint64_t cancel_wbytes;
-  bool recorded;
-};
-
 static void print_node(prov_entry_t* node){
-  char id[PROV_ID_STR_LEN];
-  int i;
-  struct propagate *np = node->msg_info.var_ptr;
-
-  // already saved it
-  if(np->recorded)
-    return;
-
-  ID_ENCODE(get_prov_identifier(node).buffer, PROV_IDENTIFIER_BUFFER_LENGTH, id, PROV_ID_STR_LEN);
-
-  fprintf(logfile, "cf:%s,", id);
-  fprintf(logfile, "%s,", node_id_to_str(node_type(node)));
-  fprintf(logfile, "%u,", np->in);
-  for(i=0; i<MAX_SUPPORTED_PARENT; i++){
-    if(np->in_type[i]!=0)
-      fprintf(logfile, "%s,", relation_id_to_str(np->in_type[i]));
-    else
-      fprintf(logfile, "NULL,");
+  switch(node_type(node)){
+    case ACT_TASK:
+      write_task(node);
+    default:
+      break;
   }
-  for(i=0; i<MAX_SUPPORTED_PARENT; i++){
-    fprintf(logfile, "%ld,", np->offset[i]);
-  }
-  fprintf(logfile, "%lu,", np->utime);
-  fprintf(logfile, "%lu,", np->stime);
-  fprintf(logfile, "%lu,", np->vm);
-  fprintf(logfile, "%lu,", np->rss);
-  fprintf(logfile, "%lu,", np->hw_vm);
-  fprintf(logfile, "%lu,", np->hw_rss);
-  fprintf(logfile, "%lu,", np->rbytes);
-  fprintf(logfile, "%lu,", np->wbytes);
-  fprintf(logfile, "%lu,", np->cancel_wbytes);
-  if (node_type(node) == ACT_TASK) {
-    fprintf(logfile, "%u,", node->task_info.utsns);
-    fprintf(logfile, "%u,", node->task_info.ipcns);
-    fprintf(logfile, "%u,", node->task_info.mntns);
-    fprintf(logfile, "%u,", node->task_info.pidns);
-    fprintf(logfile, "%u,", node->task_info.netns);
-    fprintf(logfile, "%u,", node->task_info.cgroupns);
-  } else {
-    fprintf(logfile, "-1,");
-    fprintf(logfile, "-1,");
-    fprintf(logfile, "-1,");
-    fprintf(logfile, "-1,");
-    fprintf(logfile, "-1,");
-    fprintf(logfile, "-1,");
-  }
-  fprintf(logfile, "\n");
-  fflush(logfile);
-  np->recorded=true;
 }
 
 void* zalloc(size_t size){
