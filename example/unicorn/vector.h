@@ -15,13 +15,14 @@
 #include <pwd.h>
 #include <grp.h>
 
-#define MAX_SUPPORTED_PARENT 2
+#define MAX_PARENT 2
 #define BASE_FOLDER "/tmp/"
 
-struct propagate {
+struct vec {
   uint32_t in;
-  uint64_t in_type[MAX_SUPPORTED_PARENT];
-  int64_t offset[MAX_SUPPORTED_PARENT];
+  uint64_t in_type[MAX_PARENT];
+  uint64_t p_type[MAX_PARENT];
+  int64_t offset[MAX_PARENT];
   uint64_t utime;
 	uint64_t stime;
   uint64_t vm;
@@ -36,9 +37,9 @@ struct propagate {
   bool recorded;
 };
 
-static inline void write_vector(prov_entry_t* node, void (*specific)(FILE *, prov_entry_t*, struct propagate*), FILE* file, const char filename[]){
+static inline void write_vector(prov_entry_t* node, void (*specific)(FILE *, prov_entry_t*, struct vec*), FILE* file, const char filename[]){
   int i;
-  struct propagate *np = node->msg_info.var_ptr;
+  struct vec *np = node->msg_info.var_ptr;
   char id[PROV_ID_STR_LEN];
 
   if (file == NULL)
@@ -51,9 +52,15 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(FILE *, pro
   fprintf(file, "cf:%s,", id);
   fprintf(file, "%s,", node_id_to_str(node_type(node)));
   fprintf(file, "%u,", np->in);
-  for(i=0; i<MAX_SUPPORTED_PARENT; i++){
-    if(np->in_type[i]!=0)
+  for(i=0; i<MAX_PARENT; i++){
+    if(np->in_type[i] != 0)
       fprintf(file, "%s,", relation_id_to_str(np->in_type[i]));
+    else
+      fprintf(file, "NULL,");
+  }
+  for(i=0; i<MAX_PARENT; i++){
+    if(np->p_type[i] != 0)
+      fprintf(file, "%s,", node_id_to_str(np->p_type[i]));
     else
       fprintf(file, "NULL,");
   }
@@ -70,7 +77,7 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(FILE *, pro
 }\
 
 FILE *taskfile=NULL;
-static void __write_task(FILE *file, prov_entry_t* node, struct propagate* np){
+static void __write_task(FILE *file, prov_entry_t* node, struct vec* np){
   struct passwd* pwd;
   struct group* grp;
   fprintf(file, "%lu,", np->utime);

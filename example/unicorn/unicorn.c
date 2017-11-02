@@ -16,7 +16,7 @@
 
 #include "vector.h"
 
-#define MAX_SUPPORTED_PARENT 2
+#define MAX_PARENT 2
 
 FILE *logfile;
 
@@ -27,7 +27,8 @@ static void init( void ){
 static void print_node(prov_entry_t* node){
   switch(node_type(node)){
     case ACT_TASK:
-      write_task(node);
+      //write_task(node);
+      break;
     default:
       break;
   }
@@ -40,15 +41,15 @@ void* zalloc(size_t size){
 }
 
 static int out_edge(prov_entry_t* node, prov_entry_t* edge){
-  struct propagate *ep;
-  struct propagate *np;
+  struct vec *ep;
+  struct vec *np;
 
   if (edge->msg_info.var_ptr == NULL)
-    edge->msg_info.var_ptr = zalloc(sizeof(struct propagate));
+    edge->msg_info.var_ptr = zalloc(sizeof(struct vec));
   ep = edge->msg_info.var_ptr;
 
   if (node->msg_info.var_ptr == NULL)
-    node->msg_info.var_ptr = zalloc(sizeof(struct propagate));
+    node->msg_info.var_ptr = zalloc(sizeof(struct vec));
   np = node->msg_info.var_ptr;
 
   if (edge_type(edge) == RL_VERSION_PROCESS) {
@@ -62,23 +63,27 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
     ep->wbytes = node->task_info.wbytes;
     ep->cancel_wbytes = node->task_info.cancel_wbytes;
   }
+  ep->p_type[0] = node_type(node);
   print_node(node);
   return 0;
 }
 
 static int in_edge(prov_entry_t* edge, prov_entry_t* node){
-  struct propagate *ep;
-  struct propagate *np;
+  struct vec *ep;
+  struct vec *np;
 
+  if (edge->msg_info.var_ptr == NULL)
+    edge->msg_info.var_ptr = zalloc(sizeof(struct vec));
   ep = edge->msg_info.var_ptr;
 
   if (node->msg_info.var_ptr == NULL)
-    node->msg_info.var_ptr = zalloc(sizeof(struct propagate));
+    node->msg_info.var_ptr = zalloc(sizeof(struct vec));
   np = node->msg_info.var_ptr;
 
   /* couting in edges */
-  if (np->in < MAX_SUPPORTED_PARENT) {
+  if (np->in < MAX_PARENT) {
     np->in_type[np->in] = edge_type(edge);
+    np->p_type[np->in] = ep->p_type[0];
     np->offset[np->in] = edge->relation_info.offset;
   }
   np->in++;
