@@ -14,6 +14,8 @@
 #define SERVICE_QUERY
 #include <camquery.h>
 
+#define pwrtwo(x) (1 << (x))
+
 #include "vector.h"
 
 #define MAX_PARENT 2
@@ -42,6 +44,25 @@ void* zalloc(size_t size){
 }
 
 #define task_propagate_value(param) ep->param[0] = node->task_info.param; memcpy(&(ep->param[1]), np->param, (MAX_DEPTH-1)*sizeof(uint64_t))
+
+static inline bool has_uidgid(uint64_t type)
+{
+	switch (type) {
+  	case ACT_TASK:
+  	case ENT_INODE_UNKNOWN:
+  	case ENT_INODE_LINK:
+  	case ENT_INODE_FILE:
+  	case ENT_INODE_DIRECTORY:
+  	case ENT_INODE_CHAR:
+  	case ENT_INODE_BLOCK:
+  	case ENT_INODE_FIFO:
+  	case ENT_INODE_SOCKET:
+  	case ENT_INODE_MMAP:
+  		return true;
+  	default: return false;
+	}
+}
+
 
 static int out_edge(prov_entry_t* node, prov_entry_t* edge){
   struct vec *ep;
@@ -72,17 +93,38 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
     task_propagate_value(netns);
     task_propagate_value(cgroupns);
   }
-  ep->p_type[0] = node_type(node);
+  ep->in_node = node_type(node);
+  memcpy(ep->p_type, np->p_type, REC_SIZE*sizeof(uint64_t));
+  memcpy(ep->in_type, np->in_type, REC_SIZE*sizeof(uint64_t));
+  if(has_uidgid(node_type(node)))
+    ep->uid = node->msg_info.uid;
+  else
+    ep->uid = -2;
+  memcpy(ep->p_uid, np->p_uid, REC_SIZE*sizeof(uint64_t));
+  if(has_uidgid(node_type(node)))
+    ep->gid = node->msg_info.uid;
+  else
+    ep->gid = -2;
+  memcpy(ep->p_gid, np->p_gid, REC_SIZE*sizeof(uint64_t));
   print_node(node);
   return 0;
 }
 
 #define task_retrieve_value(param) memcpy(np->param, ep->param, MAX_DEPTH*sizeof(uint64_t))
+#define task_retrieve_ancestry(param) for(i=1; i<MAX_DEPTH; i++){\
+                                        pos = CALC(i) + np->in*pwrtwo(i);\
+                                        nb = pwrtwo(i);\
+                                        pos2 = CALC(i-1);\
+                                        for(j=0;j<nb;j++){\
+                                          np->param[pos+j]=ep->param[pos2+j];\
+                                        }\
+                                      }
 
 static int in_edge(prov_entry_t* edge, prov_entry_t* node){
   struct vec *ep;
   struct vec *np;
-  int i;
+  int i, j;
+  int nb, pos, pos2;
 
   if (edge->msg_info.var_ptr == NULL)
     edge->msg_info.var_ptr = zalloc(sizeof(struct vec));
@@ -93,10 +135,16 @@ static int in_edge(prov_entry_t* edge, prov_entry_t* node){
   np = node->msg_info.var_ptr;
 
   /* couting in edges */
+
   if (np->in < MAX_PARENT) {
     np->in_type[np->in] = edge_type(edge);
-    np->p_type[np->in] = ep->p_type[0];
-    np->offset[np->in] = edge->relation_info.offset;
+    task_retrieve_ancestry(in_type);
+    np->p_type[np->in] = ep->in_node;
+    task_retrieve_ancestry(p_type);
+    np->p_uid[np->in] = ep->uid;
+    task_retrieve_ancestry(p_uid);
+    np->p_gid[np->in] = ep->gid;
+    task_retrieve_ancestry(p_gid);
   }
   np->in++;
 

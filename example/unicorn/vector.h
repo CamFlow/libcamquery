@@ -16,16 +16,29 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#define CALC(n) ((n) <= 0 ? 0 : \
+                 (n) == 1 ? 2 : \
+                 (n) == 2 ? 6 : \
+                 (n) == 3 ? 14 : \
+                 (n) == 4 ? 30 : \
+                 (n) == 5 ? 62 : \
+                 (n) == 6 ? 126 : \
+                 (n) == 7 ? 254 : \
+                 (n) == 8 ? 510 : INT_MAX)
+
 
 #define MAX_PARENT 2
 #define MAX_DEPTH  3
+#define REC_SIZE CALC(MAX_DEPTH)
 #define BASE_FOLDER "/tmp/"
+
+
 
 struct vec {
   uint32_t in;
-  uint64_t in_type[MAX_PARENT];
-  uint64_t p_type[MAX_PARENT];
-  int64_t offset[MAX_PARENT];
+  uint64_t in_type[REC_SIZE];
+  uint64_t in_node;
+  uint64_t p_type[REC_SIZE];
   uint64_t utime[MAX_DEPTH];
 	uint64_t stime[MAX_DEPTH];
   uint64_t vm[MAX_DEPTH];
@@ -41,8 +54,10 @@ struct vec {
   uint64_t pidns[MAX_DEPTH];
   uint64_t netns[MAX_DEPTH];
   uint64_t cgroupns[MAX_DEPTH];
-  uint32_t uid;
-  uint32_t gid;
+  uint64_t uid;
+  uint64_t p_uid[REC_SIZE];
+  uint64_t gid;
+  uint64_t p_gid[REC_SIZE];
   bool recorded;
 };
 
@@ -65,13 +80,13 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
   sprintf(buffer, "cf:%s,", id);
   sappend(buffer, "%s,", node_id_to_str(node_type(node)));
   sappend(buffer, "%u,", np->in);
-  for(i=0; i<MAX_PARENT; i++){
+  for(i=0; i<REC_SIZE; i++){
     if(np->in_type[i] != 0)
       sappend(buffer, "%s,", relation_id_to_str(np->in_type[i]));
     else
       sappend(buffer, "NULL,");
   }
-  for(i=0; i<MAX_PARENT; i++){
+  for(i=0; i<REC_SIZE; i++){
     if(np->p_type[i] != 0)
       sappend(buffer, "%s,", node_id_to_str(np->p_type[i]));
     else
@@ -119,18 +134,39 @@ static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
   sappend(buffer, "%u,", node->task_info.cgroupns);
   output_task_stat(cgroupns);
   sappend(buffer, "%u,", node->msg_info.uid);
+  for(i=0; i<REC_SIZE; i++){
+    sappend(buffer, "%d,", (uint32_t)np->p_uid[i]);
+  }
   sappend(buffer, "%u,", node->msg_info.gid);
+  for(i=0; i<REC_SIZE; i++){
+    sappend(buffer, "%d,", (uint32_t)np->p_gid[i]);
+  }
 }
 declare_writer(write_task, __write_task, taskfd, BASE_FOLDER "task");
 
+#define pwrtwo(x) (1 << (x))
+
 static inline void task_header(void) {
-  int i;
+  int i,j,k;
   char buffer[4096];
 
   sprintf(buffer, "id,");
   sappend(buffer, "type,");
-  iterative_header(MAX_DEPTH, "in_type");
-  iterative_header(MAX_DEPTH, "a_type");
+  sappend(buffer, "in,");
+  for(i = 0; i< MAX_DEPTH; i++){
+    for(k=0;k<pwrtwo(i);k++){
+      for(j=0; j< MAX_PARENT*(1+i); j++){
+        sappend(buffer, "in_type_%d_%d_%d,", i, k, j);
+      }
+    }
+  }
+  for(i = 0; i< MAX_DEPTH; i++){
+    for(k=0;k<pwrtwo(i);k++){
+      for(j=0; j< MAX_PARENT*(1+i); j++){
+        sappend(buffer, "a_type_%d_%d_%d,", i, k, j);
+      }
+    }
+  }
   iterative_header(MAX_DEPTH, "utime");
   iterative_header(MAX_DEPTH, "stime");
   iterative_header(MAX_DEPTH, "vm");
@@ -153,13 +189,27 @@ static inline void task_header(void) {
   sappend(buffer, "selfcgroupns,");
   iterative_header(MAX_DEPTH, "cgroupns");
   sappend(buffer, "uid,");
+  for(i = 0; i< MAX_DEPTH; i++){
+    for(k=0;k<pwrtwo(i);k++){
+      for(j=0; j< MAX_PARENT*(1+i); j++){
+        sappend(buffer, "p_uid_%d_%d_%d,", i, k, j);
+      }
+    }
+  }
   sappend(buffer, "gid,");
+  for(i = 0; i< MAX_DEPTH; i++){
+    for(k=0;k<pwrtwo(i);k++){
+      for(j=0; j< MAX_PARENT*(1+i); j++){
+        sappend(buffer, "p_gid_%d_%d_%d,", i, k, j);
+      }
+    }
+  }
   sappend(buffer, "\n");
   if ( write(taskfd, buffer, strlen(buffer)) < 0 )
     log_error("Failed writting task header");
 }
 
 static inline void init_files( void ){
-  taskfd = open(BASE_FOLDER "task", O_WRONLY|O_APPEND);
+  taskfd = open(BASE_FOLDER "task", O_WRONLY|O_APPEND|O_CREAT, 0x0644);
   task_header();
 }
