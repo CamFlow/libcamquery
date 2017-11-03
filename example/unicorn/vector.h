@@ -12,8 +12,10 @@
  *
  */
 #include <camquery.h>
-#include <pwd.h>
-#include <grp.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 
 #define MAX_PARENT 2
 #define BASE_FOLDER "/tmp/"
@@ -37,67 +39,67 @@ struct vec {
   bool recorded;
 };
 
-static inline void write_vector(prov_entry_t* node, void (*specific)(FILE *, prov_entry_t*, struct vec*), FILE* file, const char filename[]){
+static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov_entry_t*, struct vec*), int *fd, const char filename[]){
   int i;
   struct vec *np = node->msg_info.var_ptr;
-  char id[PROV_ID_STR_LEN];
+  char id[PATH_MAX];
+  memset(id, 0, PATH_MAX);
+  char buffer[4096];
 
-  if (file == NULL)
-    file = fopen(filename, "a");
+  if (*fd == 0)
+    *fd = open(filename, O_WRONLY|O_APPEND);
 
   if (np->recorded)
     return;
 
+
   ID_ENCODE(get_prov_identifier(node).buffer, PROV_IDENTIFIER_BUFFER_LENGTH, id, PROV_ID_STR_LEN);
-  fprintf(file, "cf:%s,", id);
-  fprintf(file, "%s,", node_id_to_str(node_type(node)));
-  fprintf(file, "%u,", np->in);
+  sprintf(buffer, "cf:%s,", id);
+  sprintf(buffer, "%s%s,", buffer, node_id_to_str(node_type(node)));
+  sprintf(buffer, "%s%u,", buffer, np->in);
   for(i=0; i<MAX_PARENT; i++){
     if(np->in_type[i] != 0)
-      fprintf(file, "%s,", relation_id_to_str(np->in_type[i]));
+      sprintf(buffer, "%s%s,", buffer, relation_id_to_str(np->in_type[i]));
     else
-      fprintf(file, "NULL,");
+      sprintf(buffer, "%sNULL,", buffer);
   }
   for(i=0; i<MAX_PARENT; i++){
     if(np->p_type[i] != 0)
-      fprintf(file, "%s,", node_id_to_str(np->p_type[i]));
+      sprintf(buffer, "%s%s,", buffer, node_id_to_str(np->p_type[i]));
     else
-      fprintf(file, "NULL,");
+      sprintf(buffer, "%sNULL,", buffer);
   }
 
-  specific(file, node, np);
+  specific(buffer, node, np);
 
-  fprintf(file, "\n");
-  fflush(file);
+  sprintf(buffer, "%s\n", buffer);
+
+  write(*fd, buffer, strlen(buffer));
   np->recorded=true;
 }
 
 #define declare_writer(fcn_name, specific, file, filename) static inline void fcn_name(prov_entry_t* node){\
-  write_vector(node, specific, file, filename);\
+  write_vector(node, specific, &file, filename);\
 }\
 
-FILE *taskfile=NULL;
-static void __write_task(FILE *file, prov_entry_t* node, struct vec* np){
-  struct passwd* pwd;
-  struct group* grp;
-  fprintf(file, "%lu,", np->utime);
-  fprintf(file, "%lu,", np->stime);
-  fprintf(file, "%lu,", np->vm);
-  fprintf(file, "%lu,", np->rss);
-  fprintf(file, "%lu,", np->hw_vm);
-  fprintf(file, "%lu,", np->hw_rss);
-  fprintf(file, "%lu,", np->rbytes);
-  fprintf(file, "%lu,", np->wbytes);
-  fprintf(file, "%lu,", np->cancel_wbytes);
-  fprintf(file, "%u,", node->task_info.utsns);
-  fprintf(file, "%u,", node->task_info.ipcns);
-  fprintf(file, "%u,", node->task_info.mntns);
-  fprintf(file, "%u,", node->task_info.pidns);
-  fprintf(file, "%u,", node->task_info.netns);
-  fprintf(file, "%u,", node->task_info.cgroupns);
-  pwd = getpwuid(node->msg_info.uid);
-  fprintf(file, "%s,", pwd->pw_name);
-  grp = getgrgid(node->msg_info.gid);
-  fprintf(file, "%s,", grp->gr_name);
+static int taskfd=0;
+static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
+  sprintf(buffer, "%s%lu,", buffer, np->utime);
+  sprintf(buffer, "%s%lu,", buffer, np->stime);
+  sprintf(buffer, "%s%lu,", buffer, np->vm);
+  sprintf(buffer, "%s%lu,", buffer, np->rss);
+  sprintf(buffer, "%s%lu,", buffer, np->hw_vm);
+  sprintf(buffer, "%s%lu,", buffer, np->hw_rss);
+  sprintf(buffer, "%s%lu,", buffer, np->rbytes);
+  sprintf(buffer, "%s%lu,", buffer, np->wbytes);
+  sprintf(buffer, "%s%lu,", buffer, np->cancel_wbytes);
+  sprintf(buffer, "%s%u,", buffer, node->task_info.utsns);
+  sprintf(buffer, "%s%u,", buffer, node->task_info.ipcns);
+  sprintf(buffer, "%s%u,", buffer, node->task_info.mntns);
+  sprintf(buffer, "%s%u,", buffer, node->task_info.pidns);
+  sprintf(buffer, "%s%u,", buffer, node->task_info.netns);
+  sprintf(buffer, "%s%u,", buffer, node->task_info.cgroupns);
+  sprintf(buffer, "%s%u,", buffer, node->msg_info.uid);
+  sprintf(buffer, "%s%u,", buffer, node->msg_info.gid);
 }
-declare_writer(write_task, __write_task, taskfile, BASE_FOLDER "task");
+declare_writer(write_task, __write_task, taskfd, BASE_FOLDER "task");

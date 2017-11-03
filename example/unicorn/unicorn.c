@@ -27,7 +27,7 @@ static void init( void ){
 static void print_node(prov_entry_t* node){
   switch(node_type(node)){
     case ACT_TASK:
-      //write_task(node);
+      write_task(node);
       break;
     default:
       break;
