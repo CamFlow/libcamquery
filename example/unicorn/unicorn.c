@@ -65,6 +65,12 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
     task_propagate_value(rbytes);
     task_propagate_value(wbytes);
     task_propagate_value(cancel_wbytes);
+    task_propagate_value(utsns);
+    task_propagate_value(ipcns);
+    task_propagate_value(mntns);
+    task_propagate_value(pidns);
+    task_propagate_value(netns);
+    task_propagate_value(cgroupns);
   }
   ep->p_type[0] = node_type(node);
   print_node(node);
@@ -104,6 +110,12 @@ static int in_edge(prov_entry_t* edge, prov_entry_t* node){
     task_retrieve_value(rbytes);
     task_retrieve_value(wbytes);
     task_retrieve_value(cancel_wbytes);
+    task_retrieve_value(utsns);
+    task_retrieve_value(ipcns);
+    task_retrieve_value(mntns);
+    task_retrieve_value(pidns);
+    task_retrieve_value(netns);
+    task_retrieve_value(cgroupns);
   }
   return 0;
 }

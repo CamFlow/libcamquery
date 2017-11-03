@@ -35,6 +35,12 @@ struct vec {
   uint64_t rbytes[MAX_DEPTH];
 	uint64_t wbytes[MAX_DEPTH];
 	uint64_t cancel_wbytes[MAX_DEPTH];
+  uint64_t utsns[MAX_DEPTH];
+  uint64_t ipcns[MAX_DEPTH];
+  uint64_t mntns[MAX_DEPTH];
+  uint64_t pidns[MAX_DEPTH];
+  uint64_t netns[MAX_DEPTH];
+  uint64_t cgroupns[MAX_DEPTH];
   uint32_t uid;
   uint32_t gid;
   bool recorded;
@@ -86,6 +92,7 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
 }\
 
 #define output_task_evol(param) for(i=0; i<MAX_DEPTH; i++) sappend(buffer, "%lu,",  node->task_info.param - np->param[i])
+#define output_task_stat(param) for(i=0; i<MAX_DEPTH; i++) sappend(buffer, "%lu,",  np->param[i])
 
 static int taskfd=0;
 static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
@@ -100,11 +107,17 @@ static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
   output_task_evol(wbytes);
   output_task_evol(cancel_wbytes);
   sappend(buffer, "%u,", node->task_info.utsns);
+  output_task_stat(utsns);
   sappend(buffer, "%u,", node->task_info.ipcns);
+  output_task_stat(ipcns);
   sappend(buffer, "%u,", node->task_info.mntns);
+  output_task_stat(mntns);
   sappend(buffer, "%u,", node->task_info.pidns);
+  output_task_stat(pidns);
   sappend(buffer, "%u,", node->task_info.netns);
+  output_task_stat(netns);
   sappend(buffer, "%u,", node->task_info.cgroupns);
+  output_task_stat(cgroupns);
   sappend(buffer, "%u,", node->msg_info.uid);
   sappend(buffer, "%u,", node->msg_info.gid);
 }
@@ -127,6 +140,18 @@ static inline void task_header(void) {
   iterative_header(MAX_DEPTH, "rbytes");
   iterative_header(MAX_DEPTH, "wbytes");
   iterative_header(MAX_DEPTH, "cancel_wbytes");
+  sappend(buffer, "selfutsns,");
+  iterative_header(MAX_DEPTH, "utsns");
+  sappend(buffer, "selfipcns,");
+  iterative_header(MAX_DEPTH, "ipcns");
+  sappend(buffer, "selfmntns,");
+  iterative_header(MAX_DEPTH, "mntns");
+  sappend(buffer, "selfpidns,");
+  iterative_header(MAX_DEPTH, "pidns");
+  sappend(buffer, "selfnetns,");
+  iterative_header(MAX_DEPTH, "netns");
+  sappend(buffer, "selfcgroupns,");
+  iterative_header(MAX_DEPTH, "cgroupns");
   sappend(buffer, "uid,");
   sappend(buffer, "gid,");
   sappend(buffer, "\n");
