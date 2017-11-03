@@ -39,6 +39,8 @@ struct vec {
   bool recorded;
 };
 
+#define sappend(buffer, fmt, ...) sprintf(buffer, "%s"fmt, buffer, ##__VA_ARGS__)
+
 static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov_entry_t*, struct vec*), int *fd, const char filename[]){
   int i;
   struct vec *np = node->msg_info.var_ptr;
@@ -55,26 +57,27 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
 
   ID_ENCODE(get_prov_identifier(node).buffer, PROV_IDENTIFIER_BUFFER_LENGTH, id, PROV_ID_STR_LEN);
   sprintf(buffer, "cf:%s,", id);
-  sprintf(buffer, "%s%s,", buffer, node_id_to_str(node_type(node)));
-  sprintf(buffer, "%s%u,", buffer, np->in);
+  sappend(buffer, "%s,", node_id_to_str(node_type(node)));
+  sappend(buffer, "%u,", np->in);
   for(i=0; i<MAX_PARENT; i++){
     if(np->in_type[i] != 0)
-      sprintf(buffer, "%s%s,", buffer, relation_id_to_str(np->in_type[i]));
+      sappend(buffer, "%s,", relation_id_to_str(np->in_type[i]));
     else
-      sprintf(buffer, "%sNULL,", buffer);
+      sappend(buffer, "NULL,");
   }
   for(i=0; i<MAX_PARENT; i++){
     if(np->p_type[i] != 0)
-      sprintf(buffer, "%s%s,", buffer, node_id_to_str(np->p_type[i]));
+      sappend(buffer, "%s,", node_id_to_str(np->p_type[i]));
     else
-      sprintf(buffer, "%sNULL,", buffer);
+      sappend(buffer, "NULL,");
   }
-
   specific(buffer, node, np);
 
-  sprintf(buffer, "%s\n", buffer);
+  sappend(buffer, "\n");
 
-  write(*fd, buffer, strlen(buffer));
+  // write down buffer
+  if ( write(*fd, buffer, strlen(buffer)) < 0 )
+    log_error("Failed writting vector");
   np->recorded=true;
 }
 
@@ -84,22 +87,22 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
 
 static int taskfd=0;
 static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
-  sprintf(buffer, "%s%lu,", buffer, np->utime);
-  sprintf(buffer, "%s%lu,", buffer, np->stime);
-  sprintf(buffer, "%s%lu,", buffer, np->vm);
-  sprintf(buffer, "%s%lu,", buffer, np->rss);
-  sprintf(buffer, "%s%lu,", buffer, np->hw_vm);
-  sprintf(buffer, "%s%lu,", buffer, np->hw_rss);
-  sprintf(buffer, "%s%lu,", buffer, np->rbytes);
-  sprintf(buffer, "%s%lu,", buffer, np->wbytes);
-  sprintf(buffer, "%s%lu,", buffer, np->cancel_wbytes);
-  sprintf(buffer, "%s%u,", buffer, node->task_info.utsns);
-  sprintf(buffer, "%s%u,", buffer, node->task_info.ipcns);
-  sprintf(buffer, "%s%u,", buffer, node->task_info.mntns);
-  sprintf(buffer, "%s%u,", buffer, node->task_info.pidns);
-  sprintf(buffer, "%s%u,", buffer, node->task_info.netns);
-  sprintf(buffer, "%s%u,", buffer, node->task_info.cgroupns);
-  sprintf(buffer, "%s%u,", buffer, node->msg_info.uid);
-  sprintf(buffer, "%s%u,", buffer, node->msg_info.gid);
+  sappend(buffer, "%lu,", np->utime);
+  sappend(buffer, "%lu,", np->stime);
+  sappend(buffer, "%lu,", np->vm);
+  sappend(buffer, "%lu,", np->rss);
+  sappend(buffer, "%lu,", np->hw_vm);
+  sappend(buffer, "%lu,", np->hw_rss);
+  sappend(buffer, "%lu,", np->rbytes);
+  sappend(buffer, "%lu,", np->wbytes);
+  sappend(buffer, "%lu,", np->cancel_wbytes);
+  sappend(buffer, "%u,", node->task_info.utsns);
+  sappend(buffer, "%u,", node->task_info.ipcns);
+  sappend(buffer, "%u,", node->task_info.mntns);
+  sappend(buffer, "%u,", node->task_info.pidns);
+  sappend(buffer, "%u,", node->task_info.netns);
+  sappend(buffer, "%u,", node->task_info.cgroupns);
+  sappend(buffer, "%u,", node->msg_info.uid);
+  sappend(buffer, "%u,", node->msg_info.gid);
 }
 declare_writer(write_task, __write_task, taskfd, BASE_FOLDER "task");
