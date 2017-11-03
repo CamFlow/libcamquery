@@ -154,16 +154,16 @@ static inline void task_header(void) {
   sappend(buffer, "type,");
   sappend(buffer, "in,");
   for(i = 0; i< MAX_DEPTH; i++){
-    for(k=0;k<pwrtwo(i);k++){
-      for(j=0; j< MAX_PARENT*(1+i); j++){
-        sappend(buffer, "in_type_%d_%d_%d,", i, k, j);
+    for(j=0; j< MAX_PARENT; j++){
+      for(k=0;k<pwrtwo(i);k++){
+        sappend(buffer, "in_type_%d_%d_%d,", i, j, k);
       }
     }
   }
   for(i = 0; i< MAX_DEPTH; i++){
-    for(k=0;k<pwrtwo(i);k++){
-      for(j=0; j< MAX_PARENT*(1+i); j++){
-        sappend(buffer, "a_type_%d_%d_%d,", i, k, j);
+    for(j=0; j< MAX_PARENT; j++){
+      for(k=0;k<pwrtwo(i);k++){
+        sappend(buffer, "a_type_%d_%d_%d,", i, j, k);
       }
     }
   }
@@ -190,17 +190,17 @@ static inline void task_header(void) {
   iterative_header(MAX_DEPTH, "cgroupns");
   sappend(buffer, "uid,");
   for(i = 0; i< MAX_DEPTH; i++){
-    for(k=0;k<pwrtwo(i);k++){
-      for(j=0; j< MAX_PARENT*(1+i); j++){
-        sappend(buffer, "p_uid_%d_%d_%d,", i, k, j);
+    for(j=0; j< MAX_PARENT*(1+i); j++){
+      for(k=0;k<pwrtwo(i);k++){
+        sappend(buffer, "p_uid_%d_%d_%d,", i, j, k);
       }
     }
   }
   sappend(buffer, "gid,");
   for(i = 0; i< MAX_DEPTH; i++){
-    for(k=0;k<pwrtwo(i);k++){
-      for(j=0; j< MAX_PARENT*(1+i); j++){
-        sappend(buffer, "p_gid_%d_%d_%d,", i, k, j);
+    for(j=0; j< MAX_PARENT*(1+i); j++){
+      for(k=0;k<pwrtwo(i);k++){
+        sappend(buffer, "p_gid_%d_%d_%d,", i, j, k);
       }
     }
   }
