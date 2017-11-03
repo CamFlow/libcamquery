@@ -21,7 +21,8 @@
 FILE *logfile;
 
 static void init( void ){
-  print("unicornd ready!")
+  print("unicornd ready!");
+  init_files();
 }
 
 static void print_node(prov_entry_t* node){

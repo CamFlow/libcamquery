@@ -42,15 +42,14 @@ struct vec {
 
 #define sappend(buffer, fmt, ...) sprintf(buffer, "%s"fmt, buffer, ##__VA_ARGS__)
 
+#define iterative_header(nb, name) for(i=0; i<nb; i++) sappend(buffer, name"_%d,", i)
+
 static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov_entry_t*, struct vec*), int *fd, const char filename[]){
   int i;
   struct vec *np = node->msg_info.var_ptr;
   char id[PATH_MAX];
   memset(id, 0, PATH_MAX);
   char buffer[4096];
-
-  if (*fd == 0)
-    *fd = open(filename, O_WRONLY|O_APPEND);
 
   if (np->recorded)
     return;
@@ -110,3 +109,32 @@ static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
   sappend(buffer, "%u,", node->msg_info.gid);
 }
 declare_writer(write_task, __write_task, taskfd, BASE_FOLDER "task");
+
+static inline void task_header(void) {
+  int i;
+  char buffer[4096];
+
+  sprintf(buffer, "id,");
+  sappend(buffer, "type,");
+  iterative_header(MAX_DEPTH, "in_type");
+  iterative_header(MAX_DEPTH, "a_type");
+  iterative_header(MAX_DEPTH, "utime");
+  iterative_header(MAX_DEPTH, "stime");
+  iterative_header(MAX_DEPTH, "vm");
+  iterative_header(MAX_DEPTH, "rss");
+  iterative_header(MAX_DEPTH, "hw_vm");
+  iterative_header(MAX_DEPTH, "hw_rss");
+  iterative_header(MAX_DEPTH, "rbytes");
+  iterative_header(MAX_DEPTH, "wbytes");
+  iterative_header(MAX_DEPTH, "cancel_wbytes");
+  sappend(buffer, "uid,");
+  sappend(buffer, "gid,");
+  sappend(buffer, "\n");
+  if ( write(taskfd, buffer, strlen(buffer)) < 0 )
+    log_error("Failed writting task header");
+}
+
+static inline void init_files( void ){
+  taskfd = open(BASE_FOLDER "task", O_WRONLY|O_APPEND);
+  task_header();
+}
