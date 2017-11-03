@@ -40,6 +40,8 @@ void* zalloc(size_t size){
   return ptr;
 }
 
+#define task_propagate_value(param) ep->param[0] = node->task_info.param; memcpy(&(ep->param[1]), np->param, (MAX_DEPTH-1)*sizeof(uint64_t))
+
 static int out_edge(prov_entry_t* node, prov_entry_t* edge){
   struct vec *ep;
   struct vec *np;
@@ -53,24 +55,27 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
   np = node->msg_info.var_ptr;
 
   if (edge_type(edge) == RL_VERSION_PROCESS) {
-    ep->utime = node->task_info.utime;
-    ep->stime = node->task_info.stime;
-    ep->vm = node->task_info.vm;
-    ep->rss = node->task_info.rss;
-    ep->hw_vm = node->task_info.hw_vm;
-    ep->hw_rss = node->task_info.hw_rss;
-    ep->rbytes = node->task_info.rbytes;
-    ep->wbytes = node->task_info.wbytes;
-    ep->cancel_wbytes = node->task_info.cancel_wbytes;
+    task_propagate_value(utime);
+    task_propagate_value(stime);
+    task_propagate_value(vm);
+    task_propagate_value(rss);
+    task_propagate_value(hw_vm);
+    task_propagate_value(hw_rss);
+    task_propagate_value(rbytes);
+    task_propagate_value(wbytes);
+    task_propagate_value(cancel_wbytes);
   }
   ep->p_type[0] = node_type(node);
   print_node(node);
   return 0;
 }
 
+#define task_retrieve_value(param) memcpy(np->param, ep->param, MAX_DEPTH*sizeof(uint64_t))
+
 static int in_edge(prov_entry_t* edge, prov_entry_t* node){
   struct vec *ep;
   struct vec *np;
+  int i;
 
   if (edge->msg_info.var_ptr == NULL)
     edge->msg_info.var_ptr = zalloc(sizeof(struct vec));
@@ -89,15 +94,15 @@ static int in_edge(prov_entry_t* edge, prov_entry_t* node){
   np->in++;
 
   if (edge_type(edge) == RL_VERSION_PROCESS) {
-    np->utime = node->task_info.utime - ep->utime;
-    np->stime = node->task_info.stime - ep->stime;
-    np->vm = node->task_info.vm - ep->vm;
-    np->rss = node->task_info.rss - ep->rss;
-    np->hw_vm = node->task_info.hw_vm - ep->hw_vm;
-    np->hw_rss = node->task_info.hw_rss - ep->hw_rss;
-    np->rbytes = node->task_info.rbytes - ep->rbytes;
-    np->wbytes = node->task_info.wbytes - ep->wbytes;
-    np->cancel_wbytes = node->task_info.cancel_wbytes - ep->cancel_wbytes;
+    task_retrieve_value(utime);
+    task_retrieve_value(stime);
+    task_retrieve_value(vm);
+    task_retrieve_value(rss);
+    task_retrieve_value(hw_vm);
+    task_retrieve_value(hw_rss);
+    task_retrieve_value(rbytes);
+    task_retrieve_value(wbytes);
+    task_retrieve_value(cancel_wbytes);
   }
   return 0;
 }

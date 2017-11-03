@@ -18,6 +18,7 @@
 
 
 #define MAX_PARENT 2
+#define MAX_DEPTH  3
 #define BASE_FOLDER "/tmp/"
 
 struct vec {
@@ -25,15 +26,15 @@ struct vec {
   uint64_t in_type[MAX_PARENT];
   uint64_t p_type[MAX_PARENT];
   int64_t offset[MAX_PARENT];
-  uint64_t utime;
-	uint64_t stime;
-  uint64_t vm;
-  uint64_t rss;
-  uint64_t hw_vm;
-  uint64_t hw_rss;
-  uint64_t rbytes;
-	uint64_t wbytes;
-	uint64_t cancel_wbytes;
+  uint64_t utime[MAX_DEPTH];
+	uint64_t stime[MAX_DEPTH];
+  uint64_t vm[MAX_DEPTH];
+  uint64_t rss[MAX_DEPTH];
+  uint64_t hw_vm[MAX_DEPTH];
+  uint64_t hw_rss[MAX_DEPTH];
+  uint64_t rbytes[MAX_DEPTH];
+	uint64_t wbytes[MAX_DEPTH];
+	uint64_t cancel_wbytes[MAX_DEPTH];
   uint32_t uid;
   uint32_t gid;
   bool recorded;
@@ -85,17 +86,20 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
   write_vector(node, specific, &file, filename);\
 }\
 
+#define output_task_evol(param) for(i=0; i<MAX_DEPTH; i++) sappend(buffer, "%lu,",  node->task_info.param - np->param[i])
+
 static int taskfd=0;
 static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
-  sappend(buffer, "%lu,", np->utime);
-  sappend(buffer, "%lu,", np->stime);
-  sappend(buffer, "%lu,", np->vm);
-  sappend(buffer, "%lu,", np->rss);
-  sappend(buffer, "%lu,", np->hw_vm);
-  sappend(buffer, "%lu,", np->hw_rss);
-  sappend(buffer, "%lu,", np->rbytes);
-  sappend(buffer, "%lu,", np->wbytes);
-  sappend(buffer, "%lu,", np->cancel_wbytes);
+  int i;
+  output_task_evol(utime);
+  output_task_evol(stime);
+  output_task_evol(vm);
+  output_task_evol(rss);
+  output_task_evol(hw_vm);
+  output_task_evol(hw_rss);
+  output_task_evol(rbytes);
+  output_task_evol(wbytes);
+  output_task_evol(cancel_wbytes);
   sappend(buffer, "%u,", node->task_info.utsns);
   sappend(buffer, "%u,", node->task_info.ipcns);
   sappend(buffer, "%u,", node->task_info.mntns);
