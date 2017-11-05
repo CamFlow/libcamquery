@@ -65,6 +65,26 @@ struct vec {
 
 #define iterative_header(nb, name) for(i=0; i<nb; i++) sappend(buffer, name"_%d,", i)
 
+static inline bool prov_has_uid_and_gid(uint64_t type)
+{
+	switch (type) {
+	case ACT_TASK:
+	case ENT_IATTR:
+	case ENT_INODE_UNKNOWN:
+	case ENT_INODE_LINK:
+	case ENT_INODE_FILE:
+	case ENT_INODE_DIRECTORY:
+	case ENT_INODE_CHAR:
+	case ENT_INODE_BLOCK:
+	case ENT_INODE_FIFO:
+	case ENT_INODE_SOCKET:
+	case ENT_INODE_MMAP:
+		return true;
+	default: return false;
+	}
+}
+
+
 static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov_entry_t*, struct vec*), int *fd, const char filename[]){
   int i;
   struct vec *np = node->msg_info.var_ptr;
@@ -78,20 +98,50 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
 
   ID_ENCODE(get_prov_identifier(node).buffer, PROV_IDENTIFIER_BUFFER_LENGTH, id, PROV_ID_STR_LEN);
   sprintf(buffer, "cf:%s,", id);
-  sappend(buffer, "%s,", node_id_to_str(node_type(node)));
+
+  // record edge type
   for(i=0; i<REC_SIZE; i++){
     if(np->in_type[i] != 0)
       sappend(buffer, "%s,", relation_id_to_str(np->in_type[i]));
     else
       sappend(buffer, "NULL,");
   }
+
+  // record node type
+  sappend(buffer, "%s,", node_id_to_str(node_type(node)));
   for(i=0; i<REC_SIZE; i++){
     if(np->p_type[i] != 0)
       sappend(buffer, "%s,", node_id_to_str(np->p_type[i]));
     else
       sappend(buffer, "NULL,");
   }
+
+  // record information specific to a give node type
   specific(buffer, node, np);
+
+  // user id
+  if (prov_has_uid_and_gid(np->p_type[i]))
+    sappend(buffer, "%u,", node->msg_info.uid);
+  else
+    sappend(buffer, "NULL,");
+  for(i=0; i<REC_SIZE; i++){
+    if (prov_has_uid_and_gid(np->p_type[i]))
+      sappend(buffer, "%d,", (uint32_t)np->p_uid[i]);
+    else
+      sappend(buffer, "NULL,");
+  }
+
+  // group id
+  if (prov_has_uid_and_gid(np->p_type[i]))
+    sappend(buffer, "%u,", node->msg_info.gid);
+  else
+    sappend(buffer, "NULL,");
+  for(i=0; i<REC_SIZE; i++){
+    if (prov_has_uid_and_gid(np->p_type[i]))
+      sappend(buffer, "%d,", (uint32_t)np->p_gid[i]);
+    else
+      sappend(buffer, "NULL,");
+  }
 
   sappend(buffer, "\n");
 
@@ -132,83 +182,9 @@ static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
   output_task_stat(netns);
   sappend(buffer, "%u,", node->task_info.cgroupns);
   output_task_stat(cgroupns);
-  sappend(buffer, "%u,", node->msg_info.uid);
-  for(i=0; i<REC_SIZE; i++){
-    sappend(buffer, "%d,", (uint32_t)np->p_uid[i]);
-  }
-  sappend(buffer, "%u,", node->msg_info.gid);
-  for(i=0; i<REC_SIZE; i++){
-    sappend(buffer, "%d,", (uint32_t)np->p_gid[i]);
-  }
 }
 declare_writer(write_task, __write_task, taskfd, BASE_FOLDER "task");
 
-#define pwrtwo(x) (1 << (x))
-
-static inline void task_header(void) {
-  int i,j,k;
-  char buffer[4096];
-
-  sprintf(buffer, "id,");
-  sappend(buffer, "type,");
-  sappend(buffer, "in,");
-  for(i = 0; i< MAX_DEPTH; i++){
-    for(j=0; j< MAX_PARENT; j++){
-      for(k=0;k<pwrtwo(i);k++){
-        sappend(buffer, "in_type_%d_%d_%d,", i, j, k);
-      }
-    }
-  }
-  for(i = 0; i< MAX_DEPTH; i++){
-    for(j=0; j< MAX_PARENT; j++){
-      for(k=0;k<pwrtwo(i);k++){
-        sappend(buffer, "a_type_%d_%d_%d,", i, j, k);
-      }
-    }
-  }
-  iterative_header(MAX_DEPTH, "utime");
-  iterative_header(MAX_DEPTH, "stime");
-  iterative_header(MAX_DEPTH, "vm");
-  iterative_header(MAX_DEPTH, "rss");
-  iterative_header(MAX_DEPTH, "hw_vm");
-  iterative_header(MAX_DEPTH, "hw_rss");
-  iterative_header(MAX_DEPTH, "rbytes");
-  iterative_header(MAX_DEPTH, "wbytes");
-  iterative_header(MAX_DEPTH, "cancel_wbytes");
-  sappend(buffer, "selfutsns,");
-  iterative_header(MAX_DEPTH, "utsns");
-  sappend(buffer, "selfipcns,");
-  iterative_header(MAX_DEPTH, "ipcns");
-  sappend(buffer, "selfmntns,");
-  iterative_header(MAX_DEPTH, "mntns");
-  sappend(buffer, "selfpidns,");
-  iterative_header(MAX_DEPTH, "pidns");
-  sappend(buffer, "selfnetns,");
-  iterative_header(MAX_DEPTH, "netns");
-  sappend(buffer, "selfcgroupns,");
-  iterative_header(MAX_DEPTH, "cgroupns");
-  sappend(buffer, "uid,");
-  for(i = 0; i< MAX_DEPTH; i++){
-    for(j=0; j< MAX_PARENT*(1+i); j++){
-      for(k=0;k<pwrtwo(i);k++){
-        sappend(buffer, "p_uid_%d_%d_%d,", i, j, k);
-      }
-    }
-  }
-  sappend(buffer, "gid,");
-  for(i = 0; i< MAX_DEPTH; i++){
-    for(j=0; j< MAX_PARENT*(1+i); j++){
-      for(k=0;k<pwrtwo(i);k++){
-        sappend(buffer, "p_gid_%d_%d_%d,", i, j, k);
-      }
-    }
-  }
-  sappend(buffer, "\n");
-  if ( write(taskfd, buffer, strlen(buffer)) < 0 )
-    log_error("Failed writting task header");
-}
-
 static inline void init_files( void ){
   taskfd = open(BASE_FOLDER "task", O_WRONLY|O_APPEND|O_CREAT, 0x0644);
-  task_header();
 }
