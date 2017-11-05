@@ -161,15 +161,15 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
 static int taskfd=0;
 static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
   int i;
-  output_task_evol(utime);
-  output_task_evol(stime);
-  output_task_evol(vm);
-  output_task_evol(rss);
-  output_task_evol(hw_vm);
-  output_task_evol(hw_rss);
-  output_task_evol(rbytes);
-  output_task_evol(wbytes);
-  output_task_evol(cancel_wbytes);
+  output_task_stat(utime);
+  output_task_stat(stime);
+  output_task_stat(vm);
+  output_task_stat(rss);
+  output_task_stat(hw_vm);
+  output_task_stat(hw_rss);
+  output_task_stat(rbytes);
+  output_task_stat(wbytes);
+  output_task_stat(cancel_wbytes);
   sappend(buffer, "%u,", node->task_info.utsns);
   output_task_stat(utsns);
   sappend(buffer, "%u,", node->task_info.ipcns);
