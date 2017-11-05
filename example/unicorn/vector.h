@@ -79,7 +79,6 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
   ID_ENCODE(get_prov_identifier(node).buffer, PROV_IDENTIFIER_BUFFER_LENGTH, id, PROV_ID_STR_LEN);
   sprintf(buffer, "cf:%s,", id);
   sappend(buffer, "%s,", node_id_to_str(node_type(node)));
-  sappend(buffer, "%u,", np->in);
   for(i=0; i<REC_SIZE; i++){
     if(np->in_type[i] != 0)
       sappend(buffer, "%s,", relation_id_to_str(np->in_type[i]));
