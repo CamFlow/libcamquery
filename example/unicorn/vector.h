@@ -116,30 +116,6 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
       sappend(buffer, "NULL,");
   }
 
-  // user id
-  if (prov_has_uidgid(np->p_type[i]))
-    sappend(buffer, "%u,", node->msg_info.uid);
-  else
-    sappend(buffer, "NULL,");
-  for(i=0; i<REC_SIZE; i++){
-    if (prov_has_uidgid(np->p_type[i]))
-      sappend(buffer, "%d,", (uint32_t)np->p_uid[i]);
-    else
-      sappend(buffer, "NULL,");
-  }
-
-  // group id
-  if (prov_has_uidgid(np->p_type[i]))
-    sappend(buffer, "%u,", node->msg_info.gid);
-  else
-    sappend(buffer, "NULL,");
-  for(i=0; i<REC_SIZE; i++){
-    if (prov_has_uidgid(np->p_type[i]))
-      sappend(buffer, "%d,", (uint32_t)np->p_gid[i]);
-    else
-      sappend(buffer, "NULL,");
-  }
-
   // record information specific to a give node type
   specific(buffer, node, np);
 
@@ -163,6 +139,33 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
                                     sappend(buffer, "NULL,");\
                                 }
 
+static void __print_uidgid(char *buffer, prov_entry_t* node, struct vec* np){
+  int i;
+  // user id
+  if (prov_has_uidgid(np->p_type[i]))
+    sappend(buffer, "%u,", node->msg_info.uid);
+  else
+    sappend(buffer, "NULL,");
+  for(i=0; i<REC_SIZE; i++){
+    if (prov_has_uidgid(np->p_type[i]))
+      sappend(buffer, "%d,", (uint32_t)np->p_uid[i]);
+    else
+      sappend(buffer, "NULL,");
+  }
+
+  // group id
+  if (prov_has_uidgid(np->p_type[i]))
+    sappend(buffer, "%u,", node->msg_info.gid);
+  else
+    sappend(buffer, "NULL,");
+  for(i=0; i<REC_SIZE; i++){
+    if (prov_has_uidgid(np->p_type[i]))
+      sappend(buffer, "%d,", (uint32_t)np->p_gid[i]);
+    else
+      sappend(buffer, "NULL,");
+  }
+}
+
 static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
   int i;
 
@@ -181,6 +184,7 @@ static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
   task_value_tree("%u,", pidns);
   task_value_tree("%u,", netns);
   task_value_tree("%u,", cgroupns);
+  __print_uidgid(buffer, node, np);
 }
 static int taskfd=0;
 declare_writer(write_task, __write_task, taskfd, TASK_FILE);
@@ -197,6 +201,7 @@ static void __write_inode(char *buffer, prov_entry_t* node, struct vec* np){
   int i;
 
   inode_value_tree("%x,", mode);
+  __print_uidgid(buffer, node, np);
 }
 static int filefd=0;
 declare_writer(write_file, __write_inode, filefd, FILE_FILE);
