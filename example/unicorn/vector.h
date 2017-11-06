@@ -75,7 +75,7 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
   if (np->recorded)
     return;
 
-
+  // record node ID
   ID_ENCODE(get_prov_identifier(node).buffer, PROV_IDENTIFIER_BUFFER_LENGTH, id, PROV_ID_STR_LEN);
   sprintf(buffer, "cf:%s,", id);
 

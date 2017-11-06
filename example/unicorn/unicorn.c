@@ -83,15 +83,9 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
   ep->in_node = node_type(node);
   memcpy(ep->p_type, np->p_type, REC_SIZE*sizeof(uint64_t));
   memcpy(ep->in_type, np->in_type, REC_SIZE*sizeof(uint64_t));
-  if(prov_has_uidgid(node_type(node)))
-    ep->uid = node->msg_info.uid;
-  else
-    ep->uid = -2;
+  ep->uid = node->msg_info.uid;
   memcpy(ep->p_uid, np->p_uid, REC_SIZE*sizeof(uint64_t));
-  if(prov_has_uidgid(node_type(node)))
-    ep->gid = node->msg_info.uid;
-  else
-    ep->gid = -2;
+  ep->gid = node->msg_info.uid;
   memcpy(ep->p_gid, np->p_gid, REC_SIZE*sizeof(uint64_t));
   print_node(node);
   return 0;
