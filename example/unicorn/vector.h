@@ -65,28 +65,6 @@ struct vec {
 
 #define sappend(buffer, fmt, ...) sprintf(buffer, "%s"fmt, buffer, ##__VA_ARGS__)
 
-#define iterative_header(nb, name) for(i=0; i<nb; i++) sappend(buffer, name"_%d,", i)
-
-static inline bool prov_has_uid_and_gid(uint64_t type)
-{
-	switch (type) {
-	case ACT_TASK:
-	case ENT_IATTR:
-	case ENT_INODE_UNKNOWN:
-	case ENT_INODE_LINK:
-	case ENT_INODE_FILE:
-	case ENT_INODE_DIRECTORY:
-	case ENT_INODE_CHAR:
-	case ENT_INODE_BLOCK:
-	case ENT_INODE_FIFO:
-	case ENT_INODE_SOCKET:
-	case ENT_INODE_MMAP:
-		return true;
-	default: return false;
-	}
-}
-
-
 static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov_entry_t*, struct vec*), int *fd, const char filename[]){
   int i;
   struct vec *np = node->msg_info.var_ptr;
@@ -119,24 +97,24 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
   }
 
   // user id
-  if (prov_has_uid_and_gid(np->p_type[i]))
+  if (prov_has_uidgid(np->p_type[i]))
     sappend(buffer, "%u,", node->msg_info.uid);
   else
     sappend(buffer, "NULL,");
   for(i=0; i<REC_SIZE; i++){
-    if (prov_has_uid_and_gid(np->p_type[i]))
+    if (prov_has_uidgid(np->p_type[i]))
       sappend(buffer, "%d,", (uint32_t)np->p_uid[i]);
     else
       sappend(buffer, "NULL,");
   }
 
   // group id
-  if (prov_has_uid_and_gid(np->p_type[i]))
+  if (prov_has_uidgid(np->p_type[i]))
     sappend(buffer, "%u,", node->msg_info.gid);
   else
     sappend(buffer, "NULL,");
   for(i=0; i<REC_SIZE; i++){
-    if (prov_has_uid_and_gid(np->p_type[i]))
+    if (prov_has_uidgid(np->p_type[i]))
       sappend(buffer, "%d,", (uint32_t)np->p_gid[i]);
     else
       sappend(buffer, "NULL,");
