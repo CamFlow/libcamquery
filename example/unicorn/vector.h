@@ -33,7 +33,10 @@
 #define BASE_FOLDER "/tmp/"
 #define TASK_FILE BASE_FOLDER"task"
 #define FILE_FILE BASE_FOLDER"file"
-
+#define SOCKET_FILE BASE_FOLDER"socket"
+#define FIFO_FILE BASE_FOLDER"fifo"
+#define LINK_FILE BASE_FOLDER"link"
+#define MMAP_FILE BASE_FOLDER"mmap"
 
 struct vec {
   uint32_t in;
@@ -190,15 +193,27 @@ declare_writer(write_task, __write_task, taskfd, TASK_FILE);
                                     sappend(buffer, "NULL,");\
                                 }
 
-static void __inode_task(char *buffer, prov_entry_t* node, struct vec* np){
+static void __write_inode(char *buffer, prov_entry_t* node, struct vec* np){
   int i;
 
   inode_value_tree("%x,", mode);
 }
 static int filefd=0;
-declare_writer(write_file, __inode_task, filefd, FILE_FILE);
+declare_writer(write_file, __write_inode, filefd, FILE_FILE);
+static int socketfd=0;
+declare_writer(write_socket, __write_inode, socketfd, SOCKET_FILE);
+static int fifofd=0;
+declare_writer(write_fifo, __write_inode, fifofd, FIFO_FILE);
+static int linkfd=0;
+declare_writer(write_link, __write_inode, linkfd, LINK_FILE);
+static int mmapfd=0;
+declare_writer(write_mmap, __write_inode, mmapfd, MMAP_FILE);
 
 static inline void init_files( void ){
   taskfd = open(TASK_FILE, O_WRONLY|O_APPEND|O_CREAT, 0x0644);
   filefd = open(FILE_FILE, O_WRONLY|O_APPEND|O_CREAT, 0x0644);
+  socketfd = open(SOCKET_FILE, O_WRONLY|O_APPEND|O_CREAT, 0x0644);
+  fifofd = open(FIFO_FILE, O_WRONLY|O_APPEND|O_CREAT, 0x0644);
+  linkfd = open(LINK_FILE, O_WRONLY|O_APPEND|O_CREAT, 0x0644);
+  mmapfd = open(MMAP_FILE, O_WRONLY|O_APPEND|O_CREAT, 0x0644);
 }

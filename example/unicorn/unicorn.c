@@ -35,6 +35,18 @@ static void print_node(prov_entry_t* node){
     case ENT_INODE_FILE:
       write_file(node);
       break;
+    case ENT_INODE_SOCKET:
+      write_socket(node);
+      break;
+    case ENT_INODE_FIFO:
+      write_fifo(node);
+      break;
+    case ENT_INODE_LINK:
+      write_link(node);
+      break;
+    case ENT_INODE_MMAP:
+      write_mmap(node);
+      break;
     default:
       break;
   }
