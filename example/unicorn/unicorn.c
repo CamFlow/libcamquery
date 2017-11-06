@@ -32,6 +32,9 @@ static void print_node(prov_entry_t* node){
     case ACT_TASK:
       write_task(node);
       break;
+    case ENT_INODE_FILE:
+      write_file(node);
+      break;
     default:
       break;
   }
@@ -44,25 +47,7 @@ void* zalloc(size_t size){
 }
 
 #define task_propagate_value(param) ep->param[0] = node->task_info.param; memcpy(&(ep->param[1]), np->param, (MAX_DEPTH-1)*sizeof(uint64_t))
-
-static inline bool has_uidgid(uint64_t type)
-{
-	switch (type) {
-  	case ACT_TASK:
-  	case ENT_INODE_UNKNOWN:
-  	case ENT_INODE_LINK:
-  	case ENT_INODE_FILE:
-  	case ENT_INODE_DIRECTORY:
-  	case ENT_INODE_CHAR:
-  	case ENT_INODE_BLOCK:
-  	case ENT_INODE_FIFO:
-  	case ENT_INODE_SOCKET:
-  	case ENT_INODE_MMAP:
-  		return true;
-  	default: return false;
-	}
-}
-
+#define mode_propagate_value(param) ep->param[0] = node->inode_info.param; memcpy(&(ep->param[1]), np->param, (MAX_DEPTH-1)*sizeof(uint16_t))
 
 static int out_edge(prov_entry_t* node, prov_entry_t* edge){
   struct vec *ep;
@@ -92,16 +77,18 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
     task_propagate_value(pidns);
     task_propagate_value(netns);
     task_propagate_value(cgroupns);
+  } else if(edge_type(edge) == RL_VERSION && prov_is_inode(node_type(node))) {
+    mode_propagate_value(mode);
   }
   ep->in_node = node_type(node);
   memcpy(ep->p_type, np->p_type, REC_SIZE*sizeof(uint64_t));
   memcpy(ep->in_type, np->in_type, REC_SIZE*sizeof(uint64_t));
-  if(has_uidgid(node_type(node)))
+  if(prov_has_uidgid(node_type(node)))
     ep->uid = node->msg_info.uid;
   else
     ep->uid = -2;
   memcpy(ep->p_uid, np->p_uid, REC_SIZE*sizeof(uint64_t));
-  if(has_uidgid(node_type(node)))
+  if(prov_has_uidgid(node_type(node)))
     ep->gid = node->msg_info.uid;
   else
     ep->gid = -2;
@@ -111,6 +98,7 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
 }
 
 #define task_retrieve_value(param) memcpy(np->param, ep->param, MAX_DEPTH*sizeof(uint64_t))
+#define mode_retrieve_value(param) memcpy(np->param, ep->param, MAX_DEPTH*sizeof(uint16_t))
 #define task_retrieve_ancestry(param) for(i=1; i<MAX_DEPTH; i++){\
                                         pos = CALC(i) + np->in*pwrtwo(i);\
                                         nb = pwrtwo(i);\
@@ -164,6 +152,8 @@ static int in_edge(prov_entry_t* edge, prov_entry_t* node){
     task_retrieve_value(pidns);
     task_retrieve_value(netns);
     task_retrieve_value(cgroupns);
+  } else if(edge_type(edge) == RL_VERSION && prov_is_inode(node_type(node))) {
+    mode_retrieve_value(mode);
   }
   return 0;
 }

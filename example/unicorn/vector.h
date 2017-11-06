@@ -31,7 +31,8 @@
 #define MAX_DEPTH  3
 #define REC_SIZE CALC(MAX_DEPTH)
 #define BASE_FOLDER "/tmp/"
-
+#define TASK_FILE BASE_FOLDER"task"
+#define FILE_FILE BASE_FOLDER"file"
 
 
 struct vec {
@@ -58,6 +59,7 @@ struct vec {
   uint64_t p_uid[REC_SIZE];
   uint64_t gid;
   uint64_t p_gid[REC_SIZE];
+  uint16_t mode[MAX_DEPTH];
   bool recorded;
 };
 
@@ -116,9 +118,6 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
       sappend(buffer, "NULL,");
   }
 
-  // record information specific to a give node type
-  specific(buffer, node, np);
-
   // user id
   if (prov_has_uid_and_gid(np->p_type[i]))
     sappend(buffer, "%u,", node->msg_info.uid);
@@ -143,6 +142,9 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
       sappend(buffer, "NULL,");
   }
 
+  // record information specific to a give node type
+  specific(buffer, node, np);
+
   sappend(buffer, "\n");
 
   // write down buffer
@@ -158,17 +160,26 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
 #define output_task_evol(param) for(i=0; i<MAX_DEPTH; i++) sappend(buffer, "%lu,",  node->task_info.param - np->param[i])
 #define output_task_stat(param) for(i=0; i<MAX_DEPTH; i++) sappend(buffer, "%lu,",  np->param[i])
 
-static int taskfd=0;
 static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
   int i;
+
+  sappend(buffer, "%lu,",  node->task_info.utime);
   output_task_stat(utime);
+  sappend(buffer, "%lu,",  node->task_info.stime);
   output_task_stat(stime);
+  sappend(buffer, "%lu,",  node->task_info.vm);
   output_task_stat(vm);
+  sappend(buffer, "%lu,",  node->task_info.rss);
   output_task_stat(rss);
+  sappend(buffer, "%lu,",  node->task_info.hw_vm);
   output_task_stat(hw_vm);
+  sappend(buffer, "%lu,",  node->task_info.hw_rss);
   output_task_stat(hw_rss);
+  sappend(buffer, "%lu,",  node->task_info.rbytes);
   output_task_stat(rbytes);
+  sappend(buffer, "%lu,",  node->task_info.wbytes);
   output_task_stat(wbytes);
+  sappend(buffer, "%lu,",  node->task_info.cancel_wbytes);
   output_task_stat(cancel_wbytes);
   sappend(buffer, "%u,", node->task_info.utsns);
   output_task_stat(utsns);
@@ -183,8 +194,20 @@ static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
   sappend(buffer, "%u,", node->task_info.cgroupns);
   output_task_stat(cgroupns);
 }
-declare_writer(write_task, __write_task, taskfd, BASE_FOLDER "task");
+static int taskfd=0;
+declare_writer(write_task, __write_task, taskfd, TASK_FILE);
+
+#define output_mode_stat(param) for(i=0; i<MAX_DEPTH; i++) sappend(buffer, "%x,",  np->param[i])
+static void __inode_task(char *buffer, prov_entry_t* node, struct vec* np){
+  int i;
+
+  sappend(buffer, "%x,", node->inode_info.mode);
+  output_mode_stat(mode);
+}
+static int filefd=0;
+declare_writer(write_file, __inode_task, filefd, FILE_FILE);
 
 static inline void init_files( void ){
-  taskfd = open(BASE_FOLDER "task", O_WRONLY|O_APPEND|O_CREAT, 0x0644);
+  taskfd = open(TASK_FILE, O_WRONLY|O_APPEND|O_CREAT, 0x0644);
+  filefd = open(FILE_FILE, O_WRONLY|O_APPEND|O_CREAT, 0x0644);
 }
