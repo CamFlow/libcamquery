@@ -37,29 +37,46 @@
 
 struct vec {
   uint32_t in;
-  uint64_t in_type[REC_SIZE];
-  uint64_t in_node;
+  uint64_t in_type;
+  uint64_t p_in_type[REC_SIZE];
+  uint64_t type;
   uint64_t p_type[REC_SIZE];
-  uint64_t utime[MAX_DEPTH];
-	uint64_t stime[MAX_DEPTH];
-  uint64_t vm[MAX_DEPTH];
-  uint64_t rss[MAX_DEPTH];
-  uint64_t hw_vm[MAX_DEPTH];
-  uint64_t hw_rss[MAX_DEPTH];
-  uint64_t rbytes[MAX_DEPTH];
-	uint64_t wbytes[MAX_DEPTH];
-	uint64_t cancel_wbytes[MAX_DEPTH];
-  uint64_t utsns[MAX_DEPTH];
-  uint64_t ipcns[MAX_DEPTH];
-  uint64_t mntns[MAX_DEPTH];
-  uint64_t pidns[MAX_DEPTH];
-  uint64_t netns[MAX_DEPTH];
-  uint64_t cgroupns[MAX_DEPTH];
+  uint64_t utime;
+  uint64_t p_utime[REC_SIZE];
+  uint64_t stime;
+	uint64_t p_stime[REC_SIZE];
+  uint64_t vm;
+  uint64_t p_vm[REC_SIZE];
+  uint64_t rss;
+  uint64_t p_rss[REC_SIZE];
+  uint64_t hw_vm;
+  uint64_t p_hw_vm[REC_SIZE];
+  uint64_t hw_rss;
+  uint64_t p_hw_rss[REC_SIZE];
+  uint64_t rbytes;
+  uint64_t p_rbytes[REC_SIZE];
+  uint64_t wbytes;
+	uint64_t p_wbytes[REC_SIZE];
+  uint64_t cancel_wbytes;
+	uint64_t p_cancel_wbytes[REC_SIZE];
+  uint32_t utsns;
+  uint32_t p_utsns[REC_SIZE];
+  uint32_t ipcns;
+  uint32_t p_ipcns[REC_SIZE];
+  uint32_t mntns;
+  uint32_t p_mntns[REC_SIZE];
+  uint32_t pidns;
+  uint32_t p_pidns[REC_SIZE];
+  uint32_t netns;
+  uint32_t p_netns[REC_SIZE];
+  uint32_t cgroupns;
+  uint32_t p_cgroupns[REC_SIZE];
   uint64_t uid;
   uint64_t p_uid[REC_SIZE];
   uint64_t gid;
   uint64_t p_gid[REC_SIZE];
-  uint16_t mode[MAX_DEPTH];
+  uint16_t mode;
+  uint16_t p_mode[REC_SIZE];
   bool recorded;
 };
 
@@ -81,8 +98,8 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
 
   // record edge type
   for(i=0; i<REC_SIZE; i++){
-    if(np->in_type[i] != 0)
-      sappend(buffer, "%s,", relation_id_to_str(np->in_type[i]));
+    if(np->p_in_type[i] != 0)
+      sappend(buffer, "%s,", relation_id_to_str(np->p_in_type[i]));
     else
       sappend(buffer, "NULL,");
   }
@@ -135,52 +152,48 @@ static inline void write_vector(prov_entry_t* node, void (*specific)(char*, prov
   write_vector(node, specific, &file, filename);\
 }\
 
-#define output_task_evol(param) for(i=0; i<MAX_DEPTH; i++) sappend(buffer, "%lu,",  node->task_info.param - np->param[i])
-#define output_task_stat(param) for(i=0; i<MAX_DEPTH; i++) sappend(buffer, "%lu,",  np->param[i])
+#define task_value_tree(fmt, param)  sappend(buffer, fmt,  node->task_info.param);\
+                                for(i=0; i<REC_SIZE; i++){\
+                                  if(np->p_type[i] == ACT_TASK)\
+                                     sappend(buffer, fmt, np->p_ ## param[i]);\
+                                  else\
+                                    sappend(buffer, "NULL,");\
+                                }
 
 static void __write_task(char *buffer, prov_entry_t* node, struct vec* np){
   int i;
 
-  sappend(buffer, "%lu,",  node->task_info.utime);
-  output_task_stat(utime);
-  sappend(buffer, "%lu,",  node->task_info.stime);
-  output_task_stat(stime);
-  sappend(buffer, "%lu,",  node->task_info.vm);
-  output_task_stat(vm);
-  sappend(buffer, "%lu,",  node->task_info.rss);
-  output_task_stat(rss);
-  sappend(buffer, "%lu,",  node->task_info.hw_vm);
-  output_task_stat(hw_vm);
-  sappend(buffer, "%lu,",  node->task_info.hw_rss);
-  output_task_stat(hw_rss);
-  sappend(buffer, "%lu,",  node->task_info.rbytes);
-  output_task_stat(rbytes);
-  sappend(buffer, "%lu,",  node->task_info.wbytes);
-  output_task_stat(wbytes);
-  sappend(buffer, "%lu,",  node->task_info.cancel_wbytes);
-  output_task_stat(cancel_wbytes);
-  sappend(buffer, "%u,", node->task_info.utsns);
-  output_task_stat(utsns);
-  sappend(buffer, "%u,", node->task_info.ipcns);
-  output_task_stat(ipcns);
-  sappend(buffer, "%u,", node->task_info.mntns);
-  output_task_stat(mntns);
-  sappend(buffer, "%u,", node->task_info.pidns);
-  output_task_stat(pidns);
-  sappend(buffer, "%u,", node->task_info.netns);
-  output_task_stat(netns);
-  sappend(buffer, "%u,", node->task_info.cgroupns);
-  output_task_stat(cgroupns);
+  task_value_tree("%lu,", utime);
+  task_value_tree("%lu,", stime);
+  task_value_tree("%lu,", vm);
+  task_value_tree("%lu,", rss);
+  task_value_tree("%lu,", hw_vm);
+  task_value_tree("%lu,", hw_rss);
+  task_value_tree("%lu,", rbytes);
+  task_value_tree("%lu,", wbytes);
+  task_value_tree("%lu,", cancel_wbytes);
+  task_value_tree("%u,", utsns);
+  task_value_tree("%u,", ipcns);
+  task_value_tree("%u,", mntns);
+  task_value_tree("%u,", pidns);
+  task_value_tree("%u,", netns);
+  task_value_tree("%u,", cgroupns);
 }
 static int taskfd=0;
 declare_writer(write_task, __write_task, taskfd, TASK_FILE);
 
-#define output_mode_stat(param) for(i=0; i<MAX_DEPTH; i++) sappend(buffer, "%x,",  np->param[i])
+#define inode_value_tree(fmt, param)  sappend(buffer, fmt,  node->inode_info.param);\
+                                for(i=0; i<REC_SIZE; i++){\
+                                  if(prov_is_inode(np->p_type[i]))\
+                                     sappend(buffer, fmt, np->p_ ## param[i]);\
+                                  else\
+                                    sappend(buffer, "NULL,");\
+                                }
+
 static void __inode_task(char *buffer, prov_entry_t* node, struct vec* np){
   int i;
 
-  sappend(buffer, "%x,", node->inode_info.mode);
-  output_mode_stat(mode);
+  inode_value_tree("%x,", mode);
 }
 static int filefd=0;
 declare_writer(write_file, __inode_task, filefd, FILE_FILE);

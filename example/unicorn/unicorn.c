@@ -46,8 +46,7 @@ void* zalloc(size_t size){
   return ptr;
 }
 
-#define task_propagate_value(param) ep->param[0] = node->task_info.param; memcpy(&(ep->param[1]), np->param, (MAX_DEPTH-1)*sizeof(uint64_t))
-#define mode_propagate_value(param) ep->param[0] = node->inode_info.param; memcpy(&(ep->param[1]), np->param, (MAX_DEPTH-1)*sizeof(uint16_t))
+#define propagate_value(type, cont, param) ep->param = node->cont.param; memcpy(ep->p_ ## param, np->p_ ## param, REC_SIZE*sizeof(type))
 
 static int out_edge(prov_entry_t* node, prov_entry_t* edge){
   struct vec *ep;
@@ -61,28 +60,29 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
     node->msg_info.var_ptr = zalloc(sizeof(struct vec));
   np = node->msg_info.var_ptr;
 
-  if (edge_type(edge) == RL_VERSION_PROCESS) {
-    task_propagate_value(utime);
-    task_propagate_value(stime);
-    task_propagate_value(vm);
-    task_propagate_value(rss);
-    task_propagate_value(hw_vm);
-    task_propagate_value(hw_rss);
-    task_propagate_value(rbytes);
-    task_propagate_value(wbytes);
-    task_propagate_value(cancel_wbytes);
-    task_propagate_value(utsns);
-    task_propagate_value(ipcns);
-    task_propagate_value(mntns);
-    task_propagate_value(pidns);
-    task_propagate_value(netns);
-    task_propagate_value(cgroupns);
-  } else if(edge_type(edge) == RL_VERSION && prov_is_inode(node_type(node))) {
-    mode_propagate_value(mode);
-  }
-  ep->in_node = node_type(node);
+  propagate_value(uint64_t, task_info, utime);
+  propagate_value(uint64_t, task_info, stime);
+  propagate_value(uint64_t, task_info, vm);
+  propagate_value(uint64_t, task_info, rss);
+  propagate_value(uint64_t, task_info, hw_vm);
+  propagate_value(uint64_t, task_info, hw_rss);
+  propagate_value(uint64_t, task_info, rbytes);
+  propagate_value(uint64_t, task_info, wbytes);
+  propagate_value(uint64_t, task_info, cancel_wbytes);
+
+  propagate_value(uint32_t, task_info, utsns);
+  propagate_value(uint32_t, task_info, ipcns);
+  propagate_value(uint32_t, task_info, mntns);
+  propagate_value(uint32_t, task_info, pidns);
+  propagate_value(uint32_t, task_info, netns);
+  propagate_value(uint32_t, task_info, cgroupns);
+
+  propagate_value(uint16_t, inode_info, mode);
+
+  ep->type = node_type(node);
   memcpy(ep->p_type, np->p_type, REC_SIZE*sizeof(uint64_t));
-  memcpy(ep->in_type, np->in_type, REC_SIZE*sizeof(uint64_t));
+  ep->in_type = edge_type(edge);
+  memcpy(ep->p_in_type, np->p_in_type, REC_SIZE*sizeof(uint64_t));
   ep->uid = node->msg_info.uid;
   memcpy(ep->p_uid, np->p_uid, REC_SIZE*sizeof(uint64_t));
   ep->gid = node->msg_info.uid;
@@ -91,16 +91,15 @@ static int out_edge(prov_entry_t* node, prov_entry_t* edge){
   return 0;
 }
 
-#define task_retrieve_value(param) memcpy(np->param, ep->param, MAX_DEPTH*sizeof(uint64_t))
-#define mode_retrieve_value(param) memcpy(np->param, ep->param, MAX_DEPTH*sizeof(uint16_t))
-#define task_retrieve_ancestry(param) for(i=1; i<MAX_DEPTH; i++){\
-                                        pos = CALC(i) + np->in*pwrtwo(i);\
-                                        nb = pwrtwo(i);\
-                                        pos2 = CALC(i-1);\
-                                        for(j=0;j<nb;j++){\
-                                          np->param[pos+j]=ep->param[pos2+j];\
-                                        }\
-                                      }
+#define retrieve_ancestry(param) np->p_ ## param[np->in] = ep->param;\
+                                for(i=1; i<MAX_DEPTH; i++){\
+                                  pos = CALC(i) + np->in*pwrtwo(i);\
+                                  nb = pwrtwo(i);\
+                                  pos2 = CALC(i-1);\
+                                  for(j=0;j<nb;j++){\
+                                    np->p_ ## param[pos+j]=ep->p_ ## param[pos2+j];\
+                                  }\
+                                }
 
 static int in_edge(prov_entry_t* edge, prov_entry_t* node){
   struct vec *ep;
@@ -119,36 +118,28 @@ static int in_edge(prov_entry_t* edge, prov_entry_t* node){
   /* couting in edges */
 
   if (np->in < MAX_PARENT) {
-    np->in_type[np->in] = edge_type(edge);
-    task_retrieve_ancestry(in_type);
-    np->p_type[np->in] = ep->in_node;
-    task_retrieve_ancestry(p_type);
-    np->p_uid[np->in] = ep->uid;
-    task_retrieve_ancestry(p_uid);
-    np->p_gid[np->in] = ep->gid;
-    task_retrieve_ancestry(p_gid);
+    retrieve_ancestry(in_type);
+    retrieve_ancestry(type);
+    retrieve_ancestry(uid);
+    retrieve_ancestry(gid);
+    retrieve_ancestry(utime);
+    retrieve_ancestry(stime);
+    retrieve_ancestry(vm);
+    retrieve_ancestry(rss);
+    retrieve_ancestry(hw_vm);
+    retrieve_ancestry(hw_rss);
+    retrieve_ancestry(rbytes);
+    retrieve_ancestry(wbytes);
+    retrieve_ancestry(cancel_wbytes);
+    retrieve_ancestry(utsns);
+    retrieve_ancestry(ipcns);
+    retrieve_ancestry(mntns);
+    retrieve_ancestry(pidns);
+    retrieve_ancestry(netns);
+    retrieve_ancestry(cgroupns);
+    retrieve_ancestry(mode);
   }
   np->in++;
-
-  if (edge_type(edge) == RL_VERSION_PROCESS) {
-    task_retrieve_value(utime);
-    task_retrieve_value(stime);
-    task_retrieve_value(vm);
-    task_retrieve_value(rss);
-    task_retrieve_value(hw_vm);
-    task_retrieve_value(hw_rss);
-    task_retrieve_value(rbytes);
-    task_retrieve_value(wbytes);
-    task_retrieve_value(cancel_wbytes);
-    task_retrieve_value(utsns);
-    task_retrieve_value(ipcns);
-    task_retrieve_value(mntns);
-    task_retrieve_value(pidns);
-    task_retrieve_value(netns);
-    task_retrieve_value(cgroupns);
-  } else if(edge_type(edge) == RL_VERSION && prov_is_inode(node_type(node))) {
-    mode_retrieve_value(mode);
-  }
   return 0;
 }
 
