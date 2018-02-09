@@ -107,7 +107,8 @@ static inline void get_nodes(struct edge *edge,
 static inline bool handle_missing_nodes(struct edge *edge, struct hashable_node *from_node, struct hashable_node *to_node){
   if (time_elapsed(edge->t_exist, t_cur).tv_sec < STALL_TIME)
     return false;
-  free(edge->msg->msg_info.var_ptr);
+  if (edge->msg->msg_info.var_ptr!=NULL)
+    free(edge->msg->msg_info.var_ptr);
   free(edge->msg);
   free(edge);
   return true;
