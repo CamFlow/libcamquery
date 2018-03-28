@@ -11,8 +11,7 @@
  *	(at your option) any later version.
  *
  */
-#define SERVICE_QUERY
-#include <camquery.h>
+#include "include/camquery.h"
 
 static label_t secret;
 
@@ -38,11 +37,5 @@ QUERY_LICSENSE("GPL");
 QUERY_AUTHOR("Thomas Pasquier");
 QUERY_VERSION("0.1");
 QUERY_NAME("My Example Query");
-
-// service specific build settings
-#ifdef SERVICE_QUERY
-QUERY_CHANNEL("example");
-QUERY_OUTPUT("/tmp/example.log");
-#endif
 
 register_query(init, in_edge, out_edge);
