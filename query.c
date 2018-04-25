@@ -32,10 +32,17 @@ static int in_edge(prov_entry_t* edge, prov_entry_t* node){
   return 0;
 }
 
+struct provenance_query_hooks hooks = {
+  .out_edge=&out_edge,
+  .in_edge=&in_edge,
+  .free=NULL,
+  .alloc=NULL,
+};
+
 QUERY_DESCRIPTION("An example query");
 QUERY_LICSENSE("GPL");
 QUERY_AUTHOR("Thomas Pasquier");
 QUERY_VERSION("0.1");
 QUERY_NAME("My Example Query");
 
-register_query(init, in_edge, out_edge);
+register_query(init, hooks);
