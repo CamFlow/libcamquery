@@ -20,21 +20,15 @@ static void init( void ){
   secret = generate_label("secret");
 }
 
-static int out_edge(prov_entry_t* node, prov_entry_t* edge){
-  print("Out:\t(%s)", node_str(prov_type(node)) );
-  print("Out:\t-%s->", relation_str(prov_type(edge)) );
-  return 0;
-}
-
-static int in_edge(prov_entry_t* edge, prov_entry_t* node){
-  print("In:\t-%s->", relation_str(prov_type(edge)) );
-  print("In:\t(%s)", node_str(prov_type(node)) );
+static int prov_flow(prov_entry_t* from, prov_entry_t* edge, prov_entry_t* to){
+  print("From:\t(%s)", node_str(prov_type(from)) );
+  print("Edge:\t-%s->", relation_str(prov_type(edge)) );
+  print("To:\t(%s)", node_str(prov_type(to)) );
   return 0;
 }
 
 struct provenance_query_hooks hooks = {
-  .out_edge=&out_edge,
-  .in_edge=&in_edge,
+  .flow=&prov_flow,
   .free=NULL,
   .alloc=NULL,
 };
