@@ -1,9 +1,9 @@
 /*
  *
- * Author: Thomas Pasquier <tfjmp@g.harvard.edu>
+ * Author: Thomas Pasquier <thomas.pasquier@bristol.ac.uk>
  * Author: Xueyuan Han <hanx@g.harvard.edu>
  *
- * Copyright (C) 2017 Harvard University
+ * Copyright (C) 2017-2018 Harvard University, University of Bristol
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as

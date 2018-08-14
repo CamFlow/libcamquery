@@ -5,7 +5,7 @@ CCC = gcc
 LIB = -lprovenance -lpthread -lz -lrt
 .SUFFIXES: .c
 
-build_kernel:
+build:
 	$(MAKE) -C /lib/modules/$(shell uname -r)/build/ M=$(PWD) modules
 	sudo $(MAKE) -C /lib/modules/$(shell uname -r)/build/ M=$(PWD) modules_install
 
