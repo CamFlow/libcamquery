@@ -19,7 +19,7 @@ build:
 	sudo $(MAKE) -C /lib/modules/$(shell uname -r)/build/ M=$(PWD) modules_install
 
 build_travis:
-	$(MAKE) -C /lib/modules/4.17.14camflow0.4.4+/build/ M=$(PWD) modules
+	$(MAKE) -C /lib/modules/$(shell cd build/camflow-dev/scripts && ruby version.rb)/build/ M=$(PWD) modules
 
 clean:
 	$(MAKE) -C /lib/modules/$(shell uname -r)/build/ M=$(PWD) clean
