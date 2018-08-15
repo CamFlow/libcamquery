@@ -12,7 +12,7 @@ dependencies:
 	cd build/camflow-dev && make prepare_kernel
 	cd build/camflow-dev && make config_travis
 	cd build/camflow-dev && make compile_kernel
-	cd build/camflow-dev/build/linux-stable && sudo make headers_install ARCH=x86_64 INSTALL_HDR_PATH=/usr
+	cd build/camflow-dev && make install_kernel
 
 build:
 	$(MAKE) -C /lib/modules/$(shell uname -r)/build/ M=$(PWD) modules
