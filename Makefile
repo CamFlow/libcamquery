@@ -5,9 +5,21 @@ CCC = gcc
 LIB = -lprovenance -lpthread -lz -lrt
 .SUFFIXES: .c
 
-build_kernel:
+dependencies:
+	mkdir -p build
+	cd build && git clone https://github.com/camflow/camflow-dev
+	cd build/camflow-dev && git checkout dev
+	cd build/camflow-dev && make prepare_kernel
+	cd build/camflow-dev && make config_travis
+	cd build/camflow-dev && make compile_kernel
+	cd build/camflow-dev && make install_kernel
+
+build:
 	$(MAKE) -C /lib/modules/$(shell uname -r)/build/ M=$(PWD) modules
 	sudo $(MAKE) -C /lib/modules/$(shell uname -r)/build/ M=$(PWD) modules_install
+
+build_travis:
+	$(MAKE) -C /lib/modules/$(shell cd build/camflow-dev/scripts && ruby version.rb)/build/ M=$(PWD) modules
 
 clean:
 	$(MAKE) -C /lib/modules/$(shell uname -r)/build/ M=$(PWD) clean

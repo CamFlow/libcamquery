@@ -1,9 +1,9 @@
 /*
  *
- * Author: Thomas Pasquier <tfjmp@g.harvard.edu>
+ * Author: Thomas Pasquier <thomas.pasquier@bristol.ac.uk>
  * Author: Xueyuan Han <hanx@g.harvard.edu>
  *
- * Copyright (C) 2017 Harvard University
+ * Copyright (C) 2017-2018 Harvard University, University of Bristol
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -24,11 +24,7 @@
 
 typedef uint64_t label_t;
 
-#define register_query(init_fcn, in_fcn, out_fcn)\
-struct provenance_query_hooks hooks = {\
-  QUERY_HOOK_INIT(out_edge, out_fcn),\
-  QUERY_HOOK_INIT(in_edge, in_fcn),\
-};\
+#define register_query(init_fcn, hooks)\
 static int __init query_init(void){\
    printk(KERN_INFO "Provenance: loading new query... (%s)\n", name);\
    init_fcn();\

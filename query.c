@@ -1,9 +1,9 @@
 /*
  *
- * Author: Thomas Pasquier <tfjmp@g.harvard.edu>
+ * Author: Thomas Pasquier <thomas.pasquier@bristol.ac.uk>
  * Author: Xueyuan Han <hanx@g.harvard.edu>
  *
- * Copyright (C) 2017 Harvard University
+ * Copyright (C) 2017-2018 Harvard University, University of Bristol
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -20,22 +20,23 @@ static void init( void ){
   secret = generate_label("secret");
 }
 
-static int out_edge(prov_entry_t* node, prov_entry_t* edge){
-  print("Out:\t(%s)", node_str(prov_type(node)) );
-  print("Out:\t-%s->", relation_str(prov_type(edge)) );
+static int prov_flow(prov_entry_t* from, prov_entry_t* edge, prov_entry_t* to){
+  print("From:\t(%s)", node_str(prov_type(from)) );
+  print("Edge:\t-%s->", relation_str(prov_type(edge)) );
+  print("To:\t(%s)", node_str(prov_type(to)) );
   return 0;
 }
 
-static int in_edge(prov_entry_t* edge, prov_entry_t* node){
-  print("In:\t-%s->", relation_str(prov_type(edge)) );
-  print("In:\t(%s)", node_str(prov_type(node)) );
-  return 0;
-}
+struct provenance_query_hooks hooks = {
+  .flow=&prov_flow,
+  .free=NULL,
+  .alloc=NULL,
+};
 
 QUERY_DESCRIPTION("An example query");
 QUERY_LICSENSE("GPL");
-QUERY_AUTHOR("Thomas Pasquier");
-QUERY_VERSION("0.1");
+QUERY_AUTHOR("John Doe");
+QUERY_VERSION("1.0");
 QUERY_NAME("My Example Query");
 
-register_query(init, in_edge, out_edge);
+register_query(init, hooks);
