@@ -13,13 +13,10 @@ In the short term, one can roll-back to a a pre v0.7.1 CamFlow version.
 
 The easiest way to do so is through the [camflow-dev repository](https://github.com/CamFlow/camflow-dev):
 ```
-git clone https://github.com/CamFlow/camflow-dev.git
-cd camflow-dev
+git clone https://github.com/CamFlow/camflow-install.git
+cd camflow-install
 git checkout v0.7.0
-make prepare
-make config
-make compile
-make install
+make all
 ```
 
 ## Documentation
