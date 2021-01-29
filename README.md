@@ -11,7 +11,7 @@ The good news: that can be fixed! The bad news: I don't have time to do it at th
 
 In the short term, one can roll-back to a a pre v0.7.1 CamFlow version.
 
-The easiest way to do so is through the [camflow-dev repository](https://github.com/CamFlow/camflow-dev):
+The easiest way to do so is through the [camflow-install repository](https://github.com/CamFlow/camflow-install):
 ```
 git clone https://github.com/CamFlow/camflow-install.git
 cd camflow-install
